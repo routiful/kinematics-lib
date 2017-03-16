@@ -13,13 +13,13 @@ void setup()
   size(600, 600, P3D);
   smooth();
   
-  link1 = loadShape("meshes/chain_link1.obj");
-  link2 = loadShape("meshes/chain_link2.obj");
-  link3 = loadShape("meshes/chain_link3.obj");
-  link4 = loadShape("meshes/chain_link4.obj");
-  link5 = loadShape("meshes/chain_link5.obj");
-  //gripper     = loadShape("meshes/chain_link_grip1.obj");
-  //gripper_sub = loadShape("meshes/chain_link_grip2.obj");
+  link1 = loadShape("meshes/link1.obj");
+  link2 = loadShape("meshes/link2.obj");
+  link3 = loadShape("meshes/link3.obj");
+  link4 = loadShape("meshes/link4.obj");
+  link5 = loadShape("meshes/link5.obj");
+  gripper     = loadShape("meshes/link6_l.obj");
+  gripper_sub = loadShape("meshes/link6_r.obj");
   
   initView();
 }
@@ -58,8 +58,21 @@ void draw()
   popMatrix();
   
   pushMatrix();
-  translate(0, 0, 0);
+  translate(193, 0, 199);
+  //rotateY(radians(frameCount));
   shape(link5);
+  popMatrix();
+  
+  pushMatrix();
+  translate(263, 0, 199);
+  translate(0,-30,0);
+  shape(gripper);
+  popMatrix();
+  
+  pushMatrix();
+  translate(263, 0, 199);
+  translate(0,30,0);
+  shape(gripper_sub);
   popMatrix();
 }
 
@@ -69,10 +82,10 @@ void mouseDragged(){
 }
 
 void keyPressed() {
-  if (key == 'a') transX -= 10;
-  else if (key == 'd') transX += 30;
-  else if (key == 's') transY += 30;
-  else if (key == 'w') transY -= 30;
+  if (key == 'a') transX -= 50;
+  else if (key == 'd') transX += 50;
+  else if (key == 's') transY += 50;
+  else if (key == 'w') transY -= 50;
   else if (key == 'r') scaleFactor += 1;
   else if (key == 'f') scaleFactor -= 1;
 }
