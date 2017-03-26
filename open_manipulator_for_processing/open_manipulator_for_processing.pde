@@ -12,25 +12,20 @@ float model_rot_x, model_rot_y, model_trans_x, model_trans_y, model_scale_factor
 
 Serial opencr_port;
 float[] joint_angle = new float[4];
+float[] gripper_angle = new float[2];
+
+static int tTime;
+int update_period = 250;
 
 void setup()
 {
   size(600, 600, P3D);
   smooth();
   
-  link1 = loadShape("meshes/link1.obj");
-  link2 = loadShape("meshes/link2.obj");
-  link3 = loadShape("meshes/link3.obj");
-  link4 = loadShape("meshes/link4.obj");
-  link5 = loadShape("meshes/link5.obj");
-  gripper     = loadShape("meshes/link6_l.obj");
-  gripper_sub = loadShape("meshes/link6_r.obj");
+  initShape();
   
-  printArray(Serial.list());
-  
-  String port_name = Serial.list()[3];
-  opencr_port = new Serial(this, port_name, 250000);
-  opencr_port.bufferUntil('\n');
+  connectOpenCR();
+  //setJointAngle(0,0,0,0);
   
   initView();
 }
@@ -46,7 +41,11 @@ void draw()
   rotateX(radians(90) + model_rot_x);
   rotateY(-model_rot_y);
   
-  drawManipulator();
+  if ((millis()-tTime) >= (1000 / update_period))
+  {
+    drawManipulator();
+    tTime = millis();
+  }
 }
 
 void mouseDragged(){
@@ -85,6 +84,29 @@ void initView()
          0, 1, 0);
 }
 
+void initShape()
+{
+  link1 = loadShape("meshes/link1.obj");
+  link2 = loadShape("meshes/link2.obj");
+  link3 = loadShape("meshes/link3.obj");
+  link4 = loadShape("meshes/link4.obj");
+  link5 = loadShape("meshes/link5.obj");
+  gripper     = loadShape("meshes/link6_l.obj");
+  gripper_sub = loadShape("meshes/link6_r.obj");
+  
+  setJointAngle(0, 0, 0, 0);
+  gripperOff();
+}
+
+void connectOpenCR()
+{
+  printArray(Serial.list());
+  
+  String port_name = Serial.list()[3];
+  opencr_port = new Serial(this, port_name, 250000);
+  opencr_port.bufferUntil('\n');
+}
+
 void serialEvent(Serial opencr_port) 
 {
   String opencr_string = opencr_port.readStringUntil('\n');
@@ -104,42 +126,58 @@ void serialEvent(Serial opencr_port)
 void drawManipulator()
 {
   scale(1 + model_scale_factor);
-  
+ 
+  pushMatrix();
   shape(link1);
   
-  pushMatrix();
   translate(12, 0, 36);
   rotateZ(radians(joint_angle[0]));
   shape(link2);
-  popMatrix();
   
-  pushMatrix();
-  translate(12, 0, 77);
+  translate(0, 3, 41);
   rotateY(radians(joint_angle[1]));
   shape(link3);
-  popMatrix();
   
-  pushMatrix();
-  translate(35, 0, 199);
+  translate(23, 0 , 122);
   rotateY(radians(joint_angle[2]));
   shape(link4);
-  popMatrix();
   
-  pushMatrix();
-  translate(193, 0, 199);
+  translate(159, 0, 0);
   rotateY(radians(joint_angle[3]));
   shape(link5);
-  popMatrix();
   
-  pushMatrix();
-  translate(263, 0, 199);
-  translate(0,-30,0);
+  translate(70, 0, 0);
+  translate(0, gripper_angle[0], 0);
   shape(gripper);
-  popMatrix();
   
-  pushMatrix();
-  translate(263, 0, 199);
-  translate(0,30,0);
+  translate(0, 0, 0);
+  translate(0, gripper_angle[1], 0);
   shape(gripper_sub);
   popMatrix();
+}
+
+void setJointAngle(float angle1, float angle2, float angle3, float angle4)
+{
+  joint_angle[0] = angle1;
+  joint_angle[1] = angle2;
+  joint_angle[2] = angle3;
+  joint_angle[3] = angle4;
+}
+
+void gripperOn()
+{
+  gripper_angle[0] = -10;
+  gripper_angle[1] = -gripper_angle[0] + 10;
+}
+
+void gripperOff()
+{
+  gripper_angle[0] = -33;
+  gripper_angle[1] = -gripper_angle[0] + 33;
+}
+
+void gripperJointAngle(float angle)
+{
+  gripper_angle[0] = angle;
+  gripper_angle[1] = -gripper_angle[0] - angle;
 }
