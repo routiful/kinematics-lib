@@ -24,8 +24,8 @@ void setup()
   
   initShape();
   
-  connectOpenCR();
-  //setJointAngle(0,0,0,0);
+  //connectOpenCR();
+  setJointAngle(0,0,0,0);
   
   initView();
 }
@@ -134,19 +134,19 @@ void drawManipulator()
   rotateZ(radians(joint_angle[0]));
   shape(link2);
   
-  translate(0, 3, 41);
+  translate(0, 3, 40);
   rotateY(radians(joint_angle[1]));
   shape(link3);
   
-  translate(23, 0 , 122);
+  translate(22, 0 , 122);
   rotateY(radians(joint_angle[2]));
   shape(link4);
   
-  translate(159, 0, 0);
+  translate(124, 0, 0);
   rotateY(radians(joint_angle[3]));
   shape(link5);
   
-  translate(70, 0, 0);
+  translate(69, 0, 0);
   translate(0, gripper_angle[0], 0);
   shape(gripper);
   
@@ -166,14 +166,14 @@ void setJointAngle(float angle1, float angle2, float angle3, float angle4)
 
 void gripperOn()
 {
-  gripper_angle[0] = -10;
-  gripper_angle[1] = -gripper_angle[0] + 10;
+  gripper_angle[0] = -20;
+  gripper_angle[1] = -gripper_angle[0] + 20;
 }
 
 void gripperOff()
 {
-  gripper_angle[0] = -33;
-  gripper_angle[1] = -gripper_angle[0] + 33;
+  gripper_angle[0] = -40;
+  gripper_angle[1] = -gripper_angle[0] + 44;
 }
 
 void gripperJointAngle(float angle)
