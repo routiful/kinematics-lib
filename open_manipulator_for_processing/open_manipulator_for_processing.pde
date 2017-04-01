@@ -24,8 +24,8 @@ void setup()
   
   initShape();
   
-  //connectOpenCR();
-  setJointAngle(0,0,0,0);
+  connectOpenCR();
+  //setJointAngle(70,20,0,0);
   
   initView();
 }
@@ -103,7 +103,7 @@ void connectOpenCR()
   printArray(Serial.list());
   
   String port_name = Serial.list()[3];
-  opencr_port = new Serial(this, port_name, 250000);
+  opencr_port = new Serial(this, port_name, 9600);
   opencr_port.bufferUntil('\n');
 }
 
@@ -116,11 +116,18 @@ void serialEvent(Serial opencr_port)
   
   for (int joint_num = 0; joint_num < angles.length; joint_num++)
   {
-    joint_angle[joint_num] = angles[joint_num];
-    print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "\t");
+    if (joint_num == angles.length-1)
+    {
+      gripper_angle[0] = angles[joint_num];
+      gripper_angle[1] = -gripper_angle[0] - gripper_angle[0];
+      print("gripper : " + angles[joint_num] + "\n");
+    }
+    else
+    {
+      joint_angle[joint_num] = angles[joint_num];
+      print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "\t");
+    }
   }
-  
-  println();
 }
 
 void drawManipulator()
