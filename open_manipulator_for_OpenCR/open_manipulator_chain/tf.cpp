@@ -32,3 +32,15 @@ Eigen::Matrix3f TF::calcRodrigues(Eigen::Vector3f axis, float angle)
 
   return rotation_matrix;
 }
+
+float TF::sign(float num)
+{
+  if (num >= 0.0)
+  {
+    return 1.0;
+  }
+  else
+  {
+    return -1.0;
+  }
+}

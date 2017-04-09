@@ -21,6 +21,7 @@ class TF
 
   Eigen::Matrix3f skew(Eigen::Vector3f v);
   Eigen::Matrix3f calcRodrigues(Eigen::Vector3f axis, float angle);
+  float sign(float num);
 };
 }
 
