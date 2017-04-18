@@ -38,6 +38,13 @@
 #define TORQUE_ENABLE                   1       // Value for enabling the torque
 #define TORQUE_DISABLE                  0       // Value for disabling the torque
 
+#define VALUE_OF_MAX_RADIAN_POSITION    4095
+#define VALUE_OF_MIN_RADIAN_POSITION    0
+#define VALUE_OF_ZERO_RADIAN_POSITION   2048
+
+#define MIN_RADIAN                     -3.14
+#define MAX_RADIAN                      3.14
+
 namespace open_manipulator
 {
 class MotorDriver
@@ -45,11 +52,16 @@ class MotorDriver
  public:
   MotorDriver(int8_t motor_num, float protocol_version, uint32_t baud_rate);
   ~MotorDriver();
+
   bool init(void);
   void closeDynamixel(void);
   bool setTorque(bool onoff);
+
   uint16_t* readPosition();
   bool motorControl(uint16_t *set_joint_value);
+
+  uint16_t* convertRadian2Value(float* radian);
+  float* convertValue2Radian(uint16_t* value);
 
  private:
   int8_t motor_num_;
@@ -57,6 +69,7 @@ class MotorDriver
   float  protocol_version_;
 
   uint16_t present_position_value[];
+  float present_position_radian[];
 
   dynamixel::PortHandler *portHandler_;
   dynamixel::PacketHandler *packetHandler_;

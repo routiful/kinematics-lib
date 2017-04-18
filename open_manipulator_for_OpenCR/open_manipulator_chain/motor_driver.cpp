@@ -160,3 +160,79 @@ bool MotorDriver::motorControl(uint16_t* set_joint_value)
   groupSyncWritePosition_->clearParam();
   return true;
 }
+
+uint16_t* MotorDriver::convertRadian2Value(float* radian)
+{
+  for (int id = 1; id <= motor_num_; id++)
+  {
+    if (radian[id-1] > 0)
+    {
+      if (VALUE_OF_MAX_RADIAN_POSITION <= VALUE_OF_ZERO_RADIAN_POSITION)
+      {
+        present_position_value[id-1] =  VALUE_OF_MAX_RADIAN_POSITION;
+      }
+
+      present_position_value[id-1] = (radian[id-1] * (VALUE_OF_MAX_RADIAN_POSITION - VALUE_OF_ZERO_RADIAN_POSITION) / MAX_RADIAN)
+                  + VALUE_OF_ZERO_RADIAN_POSITION;
+    }
+    else if (radian[id-1] < 0)
+    {
+      if (VALUE_OF_MIN_RADIAN_POSITION >= VALUE_OF_ZERO_RADIAN_POSITION)
+      {
+        present_position_value[id-1] =  VALUE_OF_MIN_RADIAN_POSITION;
+      }
+
+      present_position_value[id-1] = (radian[id-1] * (VALUE_OF_MIN_RADIAN_POSITION - VALUE_OF_ZERO_RADIAN_POSITION) / MIN_RADIAN)
+                  + VALUE_OF_ZERO_RADIAN_POSITION;
+    }
+    else
+    {
+      present_position_value[id-1] = VALUE_OF_ZERO_RADIAN_POSITION;
+    }
+
+    if (present_position_value[id-1] > VALUE_OF_MAX_RADIAN_POSITION)
+    {
+      present_position_value[id-1] =  VALUE_OF_MAX_RADIAN_POSITION;
+    }
+    else if (present_position_value[id-1] < VALUE_OF_MIN_RADIAN_POSITION)
+    {
+      present_position_value[id-1] =  VALUE_OF_MIN_RADIAN_POSITION;
+    }
+  }
+
+  return present_position_value;
+}
+
+float* MotorDriver::convertValue2Radian(uint16_t* value)
+{
+  for (int id = 1; id <= motor_num_; id++)
+  {
+    if (value[id-1] > VALUE_OF_ZERO_RADIAN_POSITION)
+    {
+      if (MAX_RADIAN <= 0)
+      {
+        present_position_radian[id-1] =  MAX_RADIAN;
+      }
+
+      present_position_radian[id-1] = (double) (value[id-1] - VALUE_OF_ZERO_RADIAN_POSITION) * MAX_RADIAN
+                 / (double) (VALUE_OF_MAX_RADIAN_POSITION - VALUE_OF_ZERO_RADIAN_POSITION);
+    }
+    else if (value[id-1] < VALUE_OF_ZERO_RADIAN_POSITION)
+    {
+      if (MIN_RADIAN >= 0)
+      {
+        present_position_radian[id-1] =  MIN_RADIAN;
+      }
+
+      present_position_radian[id-1] = (double) (value[id-1] - VALUE_OF_ZERO_RADIAN_POSITION) * MIN_RADIAN
+                 / (double) (VALUE_OF_MIN_RADIAN_POSITION - VALUE_OF_ZERO_RADIAN_POSITION);
+    }
+
+  //  if (present_position_radian[id-1] > MAX_RADIAN)
+  //    present_position_radian[id-1] =  MAX_RADIAN;
+  //  else if (present_position_radian[id-1] < MIN_RADIAN)
+  //    present_position_radian[id-1] =  MIN_RADIAN;
+  }
+
+  return present_position_radian;
+}
