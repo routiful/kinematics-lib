@@ -17,22 +17,18 @@
 /* Authors: Darby Lim */
 
 #include "tf.h"
+
 using namespace open_manipulator;
 
-TF::TF()
-{
-}
+TF::TF(){}
 
-TF::~TF()
-{
-
-}
+TF::~TF(){}
 
 Eigen::Matrix3f TF::skew(Eigen::Vector3f v)
 {
   Eigen::Matrix3f skew_symmetric_matrix = Eigen::Matrix3f::Zero();
 
-  skew_symmetric_matrix <<     0,  -v(2),  v(1),
+  skew_symmetric_matrix <<    0,  -v(2),  v(1),
                            v(2),      0, -v(0),
                           -v(1),   v(0),     0;
 
@@ -46,7 +42,9 @@ Eigen::Matrix3f TF::calcRodrigues(Eigen::Vector3f axis, float angle)
   Eigen::Matrix3f Identity_matrix = Eigen::Matrix3f::Identity();
 
   skew_symmetric_matrix = skew(axis);
-  rotation_matrix = Identity_matrix + skew_symmetric_matrix * sin(angle) + skew_symmetric_matrix * skew_symmetric_matrix * (1 - cos(angle));
+  rotation_matrix = Identity_matrix +
+                    skew_symmetric_matrix * sin(angle) +
+                    skew_symmetric_matrix * skew_symmetric_matrix * (1 - cos(angle));
 
   return rotation_matrix;
 }
@@ -61,4 +59,38 @@ float TF::sign(float num)
   {
     return -1.0;
   }
+}
+
+Eigen::Matrix3f TF::calcRotationMatrix(String notation, float angle)
+{
+  String roll  = "roll";
+  String pitch = "pitch";
+  String yaw   = "yaw";
+
+  Eigen::Matrix3f rotation_matrix = Eigen::Matrix3f::Identity();
+
+  if (notation.equals(roll))
+  {
+    rotation_matrix << 1.000,  0.000,      0.000,
+                       0.000,  cos(angle), sin(angle),
+                       0.000, -sin(angle), cos(angle);
+  }
+  else if (notation.equals(pitch))
+  {
+    rotation_matrix <<  cos(angle),  0.000, sin(angle),
+                        0.000,       1.000, 0.000,
+                       -sin(angle),  0.000, cos(angle);
+  }
+  else if (notation.equals(yaw))
+  {
+    rotation_matrix << cos(angle), -sin(angle), 0.000,
+                       sin(angle),  cos(angle), 0.000,
+                       0.000,       0.000,      1.000;
+  }
+  else
+  {
+    rotation_matrix = Eigen::Matrix3f::Identity();
+  }
+
+  return rotation_matrix;
 }

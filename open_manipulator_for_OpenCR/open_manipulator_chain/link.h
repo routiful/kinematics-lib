@@ -21,12 +21,14 @@
 
 #include <Eigen.h>        // Calls main Eigen matrix class library
 
+#include <arduino.h>
+
 namespace open_manipulator
 {
 class Link
 {
  public:
-  String name_;    // Link name
+  String name_;           // Link name
   uint8_t mother_;
   uint8_t sibling_;
   uint8_t child_;

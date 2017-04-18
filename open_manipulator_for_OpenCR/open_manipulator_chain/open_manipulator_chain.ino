@@ -5,8 +5,8 @@
 // #define SIMULATION
 
 #define COMMUNICATION_RATE  300
-#define GRIPPER_ON          -10
-#define GRIPPER_OFF         -33
+#define GRIPPER_ON          -10.0
+#define GRIPPER_OFF         -45.0
 #define JOINT_NUM           4
 
 #define BASE   0
@@ -16,8 +16,8 @@
 #define JOINT4 4
 #define END    5
 
-float joint_angle[JOINT_NUM+2] = {0.0, };
-float gripper_angle = GRIPPER_OFF;
+float joint_angle[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+float gripper_pos = GRIPPER_OFF;
 
 HardwareTimer serial_timer(TIMER_CH1);
 
@@ -31,34 +31,28 @@ void setup()
    while(!Serial);
 #endif
 
-  joint_angle[JOINT1] = 0.0 * DEG2RAD; joint_angle[JOINT2] = 0.0 * DEG2RAD;
-  joint_angle[JOINT3] = 0.0 * DEG2RAD; joint_angle[JOINT4] = 0.0 * DEG2RAD;
-
   initLink();
   timerInit();
 
   establishContact();
 
+  setJointAngle(joint_angle);
   forwardKinematics(BASE);
 
 #ifdef DEBUG
   for (uint8_t num = BASE; num <= END; num++)
   {
     Serial.print("link : "); Serial.println(link[num].name_);
-    Serial.println("p_ : ");
-    print_vt3f(link[num].p_);
-    Serial.println("R_ : ");
-    print_mt3f(link[num].R_);
+    Serial.println("p_ : "); print_vt3f(link[num].p_);
+    Serial.println("R_ : "); print_mt3f(link[num].R_);
   }
 #endif
 
-  open_manipulator::Link end_pose;
-  end_pose.p_ << 0.103, 0.000, 0.198;
-  end_pose.R_ << 1.000, 0.000, 0.000,
-                 0.000, 1.000, 0.000,
-                 0.000, 0.000, 1.000;
+  open_manipulator::Link goal_pose;
+  goal_pose.p_ << 0.228, 0.000, 0.198;
+  goal_pose.R_ = tf.calcRotationMatrix("pitch", 0.0);
 
-  inverseKinematics(end_pose);
+  inverseKinematics(goal_pose);
 }
 
 void loop()
@@ -141,27 +135,29 @@ void inverseKinematics(open_manipulator::Link end_pose)
   float A = 0.0, B = 0.0, C = 0.0, alpha = 0.0;
   float result_of_cosine_rule = 0.0;
 
-  r = end_pose.R_.transpose() * (link[JOINT2].p_ - end_pose.p_);
+  r = end_pose.R_.transpose() * (link[JOINT3].p_ - end_pose.p_);
   C = r.norm();
-  A = (link[JOINT3].p_ - link[JOINT2].p_).norm();
-  B = (link[JOINT4].p_ - link[JOINT3].p_).norm();
+  A = (link[JOINT4].p_ - link[JOINT3].p_).norm();
+  B = (link[END].p_     - link[JOINT4].p_).norm();
   result_of_cosine_rule = (A*A + B*B - C*C) / (2.0 * A * B);
 
-  if (result_of_cosine_rule >= 1)
+  if (result_of_cosine_rule >= 1.0)
   {
-    joint_angle[JOINT3] = 0.0;
+    joint_angle[JOINT4] = 0.0;
   }
-  else if (result_of_cosine_rule <= -1)
+  else if (result_of_cosine_rule <= -1.0)
   {
-    joint_angle[JOINT3] = M_PI;
+    joint_angle[JOINT4] = M_PI;
   }
   else
   {
-    joint_angle[JOINT3] = -acos(result_of_cosine_rule) + M_PI;
+    joint_angle[JOINT4] = -acos(result_of_cosine_rule) + M_PI;
   }
 
   alpha = asin((A/C) * sin(M_PI-joint_angle[JOINT3]));
-  joint_angle[JOINT4] = -atan2(r(0), tf.sign(r(2)) * sqrt(r(1)*r(1) + r(2)*r(2))) - alpha;
+  joint_angle[JOINT3] = alpha;//-atan2(r(0), tf.sign(r(2)) * sqrt(r(1)*r(1) + r(2)*r(2))) - alpha;
+
+  setJointAngle(joint_angle);
 
 #ifdef DEBUG
   print_vt3f(r);
@@ -169,8 +165,8 @@ void inverseKinematics(open_manipulator::Link end_pose)
   Serial.println(A);
   Serial.println(B);
   Serial.println(result_of_cosine_rule);
-  Serial.println(joint_angle[JOINT3]);
-  Serial.println(joint_angle[JOINT4]);
+  Serial.println(joint_angle[JOINT3]*RAD2DEG);
+  Serial.println(joint_angle[JOINT4]*RAD2DEG);
 #endif
 
 }
@@ -202,9 +198,9 @@ void initLink()
   link[1].mass_    = 1.0;
   link[1].p_       = Eigen::Vector3f::Zero();
   link[1].R_       = Eigen::Matrix3f::Identity();
-  link[1].q_       = joint_angle[JOINT1];
-  link[1].dq_      = 0;
-  link[1].ddq_     = 0;
+  link[1].q_       = 0.0;
+  link[1].dq_      = 0.0;
+  link[1].ddq_     = 0.0;
   link[1].a_       << 0, 0, 1;
   link[1].b_       << 0.012, 0, 0.036;
   link[1].v_       = Eigen::Vector3f::Zero();
@@ -217,9 +213,9 @@ void initLink()
   link[2].mass_    = 1.0;
   link[2].p_       = Eigen::Vector3f::Zero();
   link[2].R_       = Eigen::Matrix3f::Identity();
-  link[2].q_       = joint_angle[JOINT2];
-  link[2].dq_      = 0;
-  link[2].ddq_     = 0;
+  link[2].q_       = 0.0;
+  link[2].dq_      = 0.0;
+  link[2].ddq_     = 0.0;
   link[2].a_       << 0, 1, 0;
   link[2].b_       << 0, 0, 0.040;
   link[2].v_       = Eigen::Vector3f::Zero();
@@ -232,9 +228,9 @@ void initLink()
   link[3].mass_    = 1.0;
   link[3].p_       = Eigen::Vector3f::Zero();
   link[3].R_       = Eigen::Matrix3f::Identity();
-  link[3].q_       = joint_angle[JOINT3];
-  link[3].dq_      = 0;
-  link[3].ddq_     = 0;
+  link[3].q_       = 0.0;
+  link[3].dq_      = 0.0;
+  link[3].ddq_     = 0.0;
   link[3].a_       << 0, 1, 0;
   link[3].b_       << 0.022, 0, 0.122;
   link[3].v_       = Eigen::Vector3f::Zero();
@@ -247,11 +243,11 @@ void initLink()
   link[4].mass_    = 1.0;
   link[4].p_       = Eigen::Vector3f::Zero();
   link[4].R_       = Eigen::Matrix3f::Identity();
-  link[4].q_       = joint_angle[JOINT4];
-  link[4].dq_      = 0;
-  link[4].ddq_     = 0;
+  link[4].q_       = 0.0;
+  link[4].dq_      = 0.0;
+  link[4].ddq_     = 0.0;
   link[4].a_       << 0, 1, 0;
-  link[4].b_       << 0.069, 0, 0;
+  link[4].b_       << 0.124, 0, 0;
   link[4].v_       = Eigen::Vector3f::Zero();
   link[4].w_       = Eigen::Vector3f::Zero();
 
@@ -262,13 +258,24 @@ void initLink()
   link[5].mass_    = 1.0;
   link[5].p_       = Eigen::Vector3f::Zero();
   link[5].R_       = Eigen::Matrix3f::Identity();
-  link[5].q_       = 0;
-  link[5].dq_      = 0;
-  link[5].ddq_     = 0;
+  link[5].q_       = 0.0;
+  link[5].dq_      = 0.0;
+  link[5].ddq_     = 0.0;
   link[5].a_       = Eigen::Vector3f::Zero();
-  link[5].b_       << 0.050, 0, 0;
+  link[5].b_       << 0.070, 0, 0;
   link[5].v_       = Eigen::Vector3f::Zero();
   link[5].w_       = Eigen::Vector3f::Zero();
+}
+
+/*******************************************************************************
+* Set joint angle
+*******************************************************************************/
+void setJointAngle(float joint_angle[6])
+{
+  link[JOINT1].q_ = joint_angle[JOINT1];
+  link[JOINT2].q_ = joint_angle[JOINT2];
+  link[JOINT3].q_ = joint_angle[JOINT3];
+  link[JOINT4].q_ = joint_angle[JOINT4];
 }
 
 /*******************************************************************************
@@ -295,15 +302,15 @@ void handler_serial()
 
   if (communication)
   {
-    Serial.print(joint_angle[JOINT1]);
+    Serial.print(link[JOINT1].q_);
     Serial.print(",");
-    Serial.print(joint_angle[JOINT2]);
+    Serial.print(link[JOINT2].q_);
     Serial.print(",");
-    Serial.print(joint_angle[JOINT3]);
+    Serial.print(link[JOINT3].q_);
     Serial.print(",");
-    Serial.print(joint_angle[JOINT4]);
+    Serial.print(link[JOINT4].q_);
     Serial.print(",");
-    Serial.println(gripper_angle);
+    Serial.println(gripper_pos);
   }
 #endif
 }
