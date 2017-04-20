@@ -49,7 +49,7 @@ void setup()
 #endif
 
   open_manipulator::Link goal_pose;
-  goal_pose.p_ << 0.228, 0.000, 0.198;
+  goal_pose.p_ << 0.158, 0.000, 0.198;
   goal_pose.R_ = tf.calcRotationMatrix("pitch", 0.0);
 
   inverseKinematics(goal_pose);
@@ -135,27 +135,27 @@ void inverseKinematics(open_manipulator::Link end_pose)
   float A = 0.0, B = 0.0, C = 0.0, alpha = 0.0;
   float result_of_cosine_rule = 0.0;
 
-  r = end_pose.R_.transpose() * (link[JOINT3].p_ - end_pose.p_);
+  r = end_pose.R_.transpose() * (link[JOINT2].p_ - end_pose.p_);
   C = r.norm();
-  A = (link[JOINT4].p_ - link[JOINT3].p_).norm();
-  B = (link[END].p_     - link[JOINT4].p_).norm();
+  A = (link[JOINT3].p_ - link[JOINT2].p_).norm();
+  B = (link[JOINT4].p_ - link[JOINT3].p_).norm();
   result_of_cosine_rule = (A*A + B*B - C*C) / (2.0 * A * B);
 
   if (result_of_cosine_rule >= 1.0)
   {
-    joint_angle[JOINT4] = 0.0;
+    joint_angle[JOINT3] = 0.0 - M_PI;
   }
   else if (result_of_cosine_rule <= -1.0)
   {
-    joint_angle[JOINT4] = M_PI;
+    joint_angle[JOINT3] = M_PI - M_PI;
   }
   else
   {
-    joint_angle[JOINT4] = -acos(result_of_cosine_rule) + M_PI;
+    joint_angle[JOINT3] = -acos(result_of_cosine_rule) + M_PI - M_PI;
   }
 
-  alpha = asin((A/C) * sin(M_PI-joint_angle[JOINT3]));
-  joint_angle[JOINT3] = alpha;//-atan2(r(0), tf.sign(r(2)) * sqrt(r(1)*r(1) + r(2)*r(2))) - alpha;
+  alpha = asin((B/C) * sin(M_PI-joint_angle[JOINT3]));
+  joint_angle[JOINT4] = -atan2(r(0), tf.sign(r(2)) * sqrt(r(1)*r(1) + r(2)*r(2))) - alpha;
 
   setJointAngle(joint_angle);
 
