@@ -143,18 +143,18 @@ void inverseKinematics(open_manipulator::Link end_pose)
 
   if (result_of_cosine_rule >= 1.0)
   {
-    joint_angle[JOINT3] = 0.0 - M_PI;
+    joint_angle[JOINT3] = 0.0 - M_PI/2;
   }
   else if (result_of_cosine_rule <= -1.0)
   {
-    joint_angle[JOINT3] = M_PI - M_PI;
+    joint_angle[JOINT3] = M_PI - M_PI/2;
   }
   else
   {
-    joint_angle[JOINT3] = -acos(result_of_cosine_rule) + M_PI - M_PI;
+    joint_angle[JOINT3] = -acos(result_of_cosine_rule) + M_PI - M_PI/2;
   }
 
-  alpha = asin((B/C) * sin(M_PI-joint_angle[JOINT3]));
+  alpha = asin((A/C) * sin(joint_angle[JOINT3]));
   joint_angle[JOINT4] = -atan2(r(0), tf.sign(r(2)) * sqrt(r(1)*r(1) + r(2)*r(2))) - alpha;
 
   setJointAngle(joint_angle);
