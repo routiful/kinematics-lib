@@ -22,7 +22,7 @@
 #include <Eigen.h>        // Calls main Eigen matrix class library
 #include <Eigen/LU>       // Calls inverse, determinant, LU decomp., etc.
 
-#include <arduino.h>
+#include <Arduino.h>
 #include <math.h>
 
 

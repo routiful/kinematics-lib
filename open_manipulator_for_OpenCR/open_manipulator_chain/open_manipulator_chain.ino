@@ -16,7 +16,7 @@
 #define JOINT4 4
 #define END    5
 
-float joint_angle[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+float joint_angle[6] = {0.0, 0.0, 60.0*DEG2RAD, -30.0*DEG2RAD, -30.0*DEG2RAD, 0.0};
 float gripper_pos = GRIPPER_OFF;
 
 HardwareTimer serial_timer(TIMER_CH1);
@@ -49,8 +49,8 @@ void setup()
 #endif
 
   open_manipulator::Link goal_pose;
-  goal_pose.p_ << 0.158, 0.000, 0.198;
-  goal_pose.R_ = tf.calcRotationMatrix("pitch", 0.0);
+  goal_pose.p_ << 0.095, 0.000, 0.218;
+  goal_pose.R_ = Eigen::Matrix3f::Identity();
 
   inverseKinematics(goal_pose);
 }
@@ -58,38 +58,6 @@ void setup()
 void loop()
 {
   showLedStatus();
-}
-
-/*******************************************************************************
-* Print link name
-*******************************************************************************/
-void printLinkName(int8_t me)
-{
-  if (me != -1)
-  {
-    Serial.println(link[me].name_);
-    printLinkName(link[me].child_);
-    printLinkName(link[me].sibling_);
-  }
-}
-
-/*******************************************************************************
-* Get mass of links
-*******************************************************************************/
-float totalMass(int8_t me)
-{
-  float mass = 0.0;
-
-  if (me == -1)
-  {
-    mass = 0.0;
-  }
-  else
-  {
-    mass = link[me].mass_ + totalMass(link[me].child_) + totalMass(link[me].sibling_);
-  }
-
-  return mass;
 }
 
 /*******************************************************************************
@@ -129,13 +97,32 @@ void forwardKinematics(int8_t me)
 /*******************************************************************************
 * Inverse kinematics (Analytical Method)
 *******************************************************************************/
-void inverseKinematics(open_manipulator::Link end_pose)
+void inverseKinematics(open_manipulator::Link goal_pose)
 {
   Eigen::Vector3f r;
   float A = 0.0, B = 0.0, C = 0.0, alpha = 0.0;
   float result_of_cosine_rule = 0.0;
 
-  r = end_pose.R_.transpose() * (link[JOINT2].p_ - end_pose.p_);
+  r = goal_pose.R_.transpose() * (link[JOINT3].p_ - goal_pose.p_);
+  C = r.norm();
+  A = (link[JOINT4].p_ - link[JOINT3].p_).norm();
+  B = (link[END].p_ - link[JOINT4].p_).norm();
+  result_of_cosine_rule = (A*A + B*B - C*C) / (2.0 * A * B);
+
+  if (result_of_cosine_rule >= 1.0)
+  {
+    joint_angle[JOINT4] = 0.0;
+  }
+  else if (result_of_cosine_rule <= -1.0)
+  {
+    joint_angle[JOINT4] = 0.0;
+  }
+  else
+  {
+    joint_angle[JOINT4] = acos(result_of_cosine_rule) - M_PI;
+  }
+
+  r = link[JOINT4].R_.transpose() * (link[JOINT2].p_ - link[JOINT4].p_);
   C = r.norm();
   A = (link[JOINT3].p_ - link[JOINT2].p_).norm();
   B = (link[JOINT4].p_ - link[JOINT3].p_).norm();
@@ -143,28 +130,31 @@ void inverseKinematics(open_manipulator::Link end_pose)
 
   if (result_of_cosine_rule >= 1.0)
   {
-    joint_angle[JOINT3] = 0.0 - M_PI/2;
+    joint_angle[JOINT3] = 0.0;
   }
   else if (result_of_cosine_rule <= -1.0)
   {
-    joint_angle[JOINT3] = M_PI - M_PI/2;
+    joint_angle[JOINT3] = 0.0;
   }
   else
   {
-    joint_angle[JOINT3] = -acos(result_of_cosine_rule) + M_PI - M_PI/2;
+    joint_angle[JOINT3] = acos(result_of_cosine_rule) - (100.2 * DEG2RAD);
   }
 
-  alpha = asin((A/C) * sin(joint_angle[JOINT3]));
-  joint_angle[JOINT4] = -atan2(r(0), tf.sign(r(2)) * sqrt(r(1)*r(1) + r(2)*r(2))) - alpha;
+  Eigen::Matrix3f R = Eigen::Matrix3f::Identity();
+  R = link[BASE].R_.transpose() *
+      link[END].R_ *
+      tf.calcRotationMatrix("pitch", joint_angle[JOINT3]).transpose() *
+      tf.calcRotationMatrix("pitch", joint_angle[JOINT4]).transpose();
+
+  joint_angle[JOINT2] = atan2(R(0,2), R(0,0));
+  joint_angle[JOINT1] = atan2(R(1,0), R(0,0));
 
   setJointAngle(joint_angle);
 
 #ifdef DEBUG
-  print_vt3f(r);
-  Serial.println(C);
-  Serial.println(A);
-  Serial.println(B);
-  Serial.println(result_of_cosine_rule);
+  Serial.println(joint_angle[JOINT1]*RAD2DEG);
+  Serial.println(joint_angle[JOINT2]*RAD2DEG);
   Serial.println(joint_angle[JOINT3]*RAD2DEG);
   Serial.println(joint_angle[JOINT4]*RAD2DEG);
 #endif
@@ -216,7 +206,7 @@ void initLink()
   link[2].q_       = 0.0;
   link[2].dq_      = 0.0;
   link[2].ddq_     = 0.0;
-  link[2].a_       << 0, 1, 0;
+  link[2].a_       << 0, -1, 0;
   link[2].b_       << 0, 0, 0.040;
   link[2].v_       = Eigen::Vector3f::Zero();
   link[2].w_       = Eigen::Vector3f::Zero();
@@ -231,7 +221,7 @@ void initLink()
   link[3].q_       = 0.0;
   link[3].dq_      = 0.0;
   link[3].ddq_     = 0.0;
-  link[3].a_       << 0, 1, 0;
+  link[3].a_       << 0, -1, 0;
   link[3].b_       << 0.022, 0, 0.122;
   link[3].v_       = Eigen::Vector3f::Zero();
   link[3].w_       = Eigen::Vector3f::Zero();
@@ -246,7 +236,7 @@ void initLink()
   link[4].q_       = 0.0;
   link[4].dq_      = 0.0;
   link[4].ddq_     = 0.0;
-  link[4].a_       << 0, 1, 0;
+  link[4].a_       << 0, -1, 0;
   link[4].b_       << 0.124, 0, 0;
   link[4].v_       = Eigen::Vector3f::Zero();
   link[4].w_       = Eigen::Vector3f::Zero();

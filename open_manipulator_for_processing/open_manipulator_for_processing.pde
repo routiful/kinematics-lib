@@ -6,7 +6,6 @@
 */
 
 import processing.serial.*;
-import g4p_controls.*;
 
 // Shape variable
 PShape link1, link2, link3, link4, link5, gripper, gripper_sub;
@@ -17,8 +16,6 @@ Serial opencr_port;
 // Angle variable
 float[] joint_angle = new float[4];
 float[] gripper_angle = new float[2];
-// GUI variable
-GButton btnConnect;
 // Simulation frequency
 static int tTime;
 int update_period = 250;
@@ -31,7 +28,7 @@ void setup()
   initShape();
   initView();
   
-  connectOpenCR(3);
+  connectOpenCR(0);
 }
 
 void draw()

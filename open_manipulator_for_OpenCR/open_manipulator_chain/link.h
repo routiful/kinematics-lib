@@ -21,7 +21,7 @@
 
 #include <Eigen.h>        // Calls main Eigen matrix class library
 
-#include <arduino.h>
+// #include <arduino.h>
 
 namespace open_manipulator
 {

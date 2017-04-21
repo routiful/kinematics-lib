@@ -19,7 +19,7 @@
 #ifndef TRAJECTORY_H_
 #define TRAJECTORY_H_
 
-#include <arduino.h>
+#include <Arduino.h>
 #include <math.h>
 
 namespace open_manipulator
