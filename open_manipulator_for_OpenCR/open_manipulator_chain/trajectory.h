@@ -16,32 +16,26 @@
 
 /* Authors: Darby Lim */
 
-#ifndef TF_H_
-#define TF_H_
-
-#include <Eigen.h>        // Calls main Eigen matrix class library
-#include <Eigen/LU>       // Calls inverse, determinant, LU decomp., etc.
+#ifndef TRAJECTORY_H_
+#define TRAJECTORY_H_
 
 #include <Arduino.h>
 #include <math.h>
 
-
-#define DEG2RAD (M_PI / 180.0)
-#define RAD2DEG (180.0 / M_PI)
-
 namespace open_manipulator
 {
-class TF
+class Trajectory
 {
  public:
-  TF();
-  ~TF();
+   uint16_t position_value[];
 
-  Eigen::Matrix3f skew(Eigen::Vector3f v);
-  Eigen::Matrix3f calcRodrigues(Eigen::Vector3f axis, float angle);
-  float sign(float num);
-  Eigen::Matrix3f calcRotationMatrix(String notation, float angle);
+ public:
+  Trajectory();
+  ~Trajectory();
+
+  uint16_t* trapezoidalVelocityProfile(uint16_t* pos_start, uint16_t* pos_end, float acc, float max_vel);
+  uint16_t* trapezoidalTimeProfile(uint16_t* pos_start, uint16_t* pos_end, float acc_time, float total_time);
 };
 }
 
-#endif // TF_H_
+#endif // TRAJECTORY_H_
