@@ -94,3 +94,24 @@ Eigen::Matrix3f TF::calcRotationMatrix(String notation, float angle)
 
   return rotation_matrix;
 }
+
+Eigen::Vector3f calcAngularVelocity(Eigen::Matrix3f R)
+{
+  Eigen Vector3f 
+}
+
+Eigen::Vector3f calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
+{
+  Eigen::Vector3f Perr;
+  Perr = Cref - Cnow;
+
+  return Perr;
+}
+Eigen::Matrix3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
+{
+  Eigen::Matrix3f Rerr, Werr;
+  Rerr = Cnow.transpose() * Cref;
+  Werr = Cnow.transpose() * calcAngularVelocity(Rerr);
+
+  return Werr;
+}
