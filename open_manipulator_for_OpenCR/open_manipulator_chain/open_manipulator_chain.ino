@@ -1,8 +1,26 @@
+/*******************************************************************************
+* Copyright 2016 ROBOTIS CO., LTD.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*******************************************************************************/
+
+/* Authors: Darby Lim */
+
 #include "link.h"
 #include "tf.h"
 
-#define DEBUG
-// #define SIMULATION
+// #define DEBUG
+#define SIMULATION
 
 #define COMMUNICATION_RATE  300
 #define GRIPPER_ON          -10.0
@@ -23,6 +41,14 @@ HardwareTimer serial_timer(TIMER_CH1);
 
 open_manipulator::Link link[JOINT_NUM+2];
 open_manipulator::TF tf;
+
+struct Pose
+{
+  Eigen::Vector3f position;
+  Eigen::Matrix3f orientation;
+};
+
+Pose start_pose, goal_pose;
 
 void setup()
 {
@@ -48,9 +74,8 @@ void setup()
   }
 #endif
 
-  open_manipulator::Link goal_pose;
-  goal_pose.p_ << 0.095, 0.000, 0.218;
-  goal_pose.R_ = Eigen::Matrix3f::Identity();
+  goal_pose.position << 0.095, 0.000, 0.218;
+  goal_pose.orientation = Eigen::Matrix3f::Identity();
 
   inverseKinematics(goal_pose);
 }
@@ -97,13 +122,13 @@ void forwardKinematics(int8_t me)
 /*******************************************************************************
 * Inverse kinematics (Analytical Method)
 *******************************************************************************/
-void inverseKinematics(open_manipulator::Link goal_pose)
+void inverseKinematics(Pose goal_pose)
 {
   Eigen::Vector3f r;
   float A = 0.0, B = 0.0, C = 0.0, alpha = 0.0;
   float result_of_cosine_rule = 0.0;
 
-  r = goal_pose.R_.transpose() * (link[JOINT3].p_ - goal_pose.p_);
+  r = goal_pose.orientation.transpose() * (link[JOINT3].p_ - goal_pose.position);
   C = r.norm();
   A = (link[JOINT4].p_ - link[JOINT3].p_).norm();
   B = (link[END].p_ - link[JOINT4].p_).norm();
@@ -158,7 +183,45 @@ void inverseKinematics(open_manipulator::Link goal_pose)
   Serial.println(joint_angle[JOINT3]*RAD2DEG);
   Serial.println(joint_angle[JOINT4]*RAD2DEG);
 #endif
+}
 
+/*******************************************************************************
+* Inverse kinematics (Numerical Method)
+*******************************************************************************/
+void inverseKinematics(Pose start_pose, Pose goal_pose)
+{
+  float lambda = 0.5;
+  Eigen::MatrixXf J(6,4);
+  Eigen::Vector3f Verr, Werr;
+  Eigen::VectorXf VWerr(6);
+  Eigen::VectorXf dq(6);
+
+  forwardKinematics(BASE);
+
+  for (int i = 0; i < 10; i++)
+  {
+    //J = tf.calcJacobian();
+    Verr = tf.calcVerr(start_pose.position, goal_pose.position);
+    Werr = tf.calcWerr(start_pose.orientation, goal_pose.orientation);
+    VWerr << Verr(0), Verr(1), Verr(2),
+             Werr(0), Werr(1), Werr(2);
+
+    if (VWerr.norm() < 1E-6)
+    {
+      return;
+    }
+
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
+    // dq = dec.solve(VWerr);
+
+    // dq = lambda * (J.ColPivHouseholderQR().solve(VWerr));
+
+    for (int id = JOINT1; id <= JOINT4; i++)
+    {
+      link[id].q_ = link[id].q_ + dq(id);
+    }
+    forwardKinematics(BASE);
+  }
 }
 
 /*******************************************************************************

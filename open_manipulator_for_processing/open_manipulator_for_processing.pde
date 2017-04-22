@@ -28,7 +28,7 @@ void setup()
   initShape();
   initView();
   
-  connectOpenCR(0);
+  connectOpenCR(3);
 }
 
 void draw()
@@ -141,22 +141,22 @@ void drawManipulator()
   drawLocalFrame();
 
   translate(12, 0, 36);
-  rotateZ(joint_angle[0]);
+  rotateZ(-joint_angle[0]);
   shape(link2);
   drawLocalFrame();
 
   translate(0, 2, 40);
-  rotateY(joint_angle[1]);
+  rotateY(-joint_angle[1]);
   shape(link3);
   drawLocalFrame();
 
   translate(22, 0 , 122);
-  rotateY(joint_angle[2]);
+  rotateY(-joint_angle[2]);
   shape(link4);
   drawLocalFrame();
 
   translate(124, 0, 0);
-  rotateY(joint_angle[3]);
+  rotateY(-joint_angle[3]);
   shape(link5);
   drawLocalFrame();
 

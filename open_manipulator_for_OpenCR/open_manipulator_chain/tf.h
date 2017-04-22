@@ -19,12 +19,11 @@
 #ifndef TF_H_
 #define TF_H_
 
-#include <Eigen.h>        // Calls main Eigen matrix class library
-#include <Eigen/LU>       // Calls inverse, determinant, LU decomp., etc.
-
 #include <Arduino.h>
 #include <math.h>
 
+#include <Eigen.h>        // Calls main Eigen matrix class library
+#include <Eigen/LU>       // Calls inverse, determinant, LU decomp., etc.
 
 #define DEG2RAD (M_PI / 180.0)
 #define RAD2DEG (180.0 / M_PI)
@@ -42,7 +41,7 @@ class TF
   float sign(float num);
   Eigen::Matrix3f calcRotationMatrix(String notation, float angle);
   Eigen::Vector3f calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow);
-  Eigen::Matrix3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow);
+  Eigen::Vector3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow);
   Eigen::Vector3f calcAngularVelocity(Eigen::Matrix3f R);
 };
 }

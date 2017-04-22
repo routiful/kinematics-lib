@@ -19,9 +19,8 @@
 #ifndef LINK_H_
 #define LINK_H_
 
+#include <Arduino.h>
 #include <Eigen.h>        // Calls main Eigen matrix class library
-
-// #include <arduino.h>
 
 namespace open_manipulator
 {

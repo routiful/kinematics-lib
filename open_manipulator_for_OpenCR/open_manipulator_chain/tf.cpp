@@ -97,21 +97,66 @@ Eigen::Matrix3f TF::calcRotationMatrix(String notation, float angle)
 
 Eigen::Vector3f calcAngularVelocity(Eigen::Matrix3f R)
 {
-  Eigen Vector3f 
+  Eigen::Vector3f l = Eigen::Vector3f::Zero();
+  Eigen::Vector3f w = Eigen::Vector3f::Zero();
+
+  float theta = 0.0;
+  float diag = 0.0;
+  bool diagonal_matrix = true;
+
+  l << R(2,1) - R(1,2),
+       R(0,2) - R(2,0),
+       R(1,0) - R(0,1);
+  theta = atan2(l.norm(), R(0,0) + R(1,1) + R(2,2) - 1);
+  diag = R(0,0) + R(1,1) + R(2,2);
+
+  for (int i = 0; i < 3; i++)
+  {
+    for (int j = 0; j < 3; j++)
+    {
+      if (i != j)
+      {
+        if (R(i, j) != 0)
+        {
+          diagonal_matrix = false;
+        }
+      }
+    }
+  }
+
+  if (R == Eigen::Matrix3f::Identity())
+  {
+    w  = Eigen::Vector3f::Zero();
+  }
+  else if (diagonal_matrix == true)
+  {
+    w << R(0,0) + 1, R(1,1) + 1, R(2,2) + 1;
+    w = w * M_PI_2;
+  }
+  else
+  {
+    w = theta * (l / l.norm());
+  }
+
+  return w;
 }
 
 Eigen::Vector3f calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
 {
-  Eigen::Vector3f Perr;
-  Perr = Cref - Cnow;
+  Eigen::Vector3f Verr;
 
-  return Perr;
+  Verr = Cref - Cnow;
+
+  return Verr;
 }
-Eigen::Matrix3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
+
+Eigen::Vector3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
 {
-  Eigen::Matrix3f Rerr, Werr;
+  Eigen::Matrix3f Rerr;
+  Eigen::Vector3f Werr;
+
   Rerr = Cnow.transpose() * Cref;
-  Werr = Cnow.transpose() * calcAngularVelocity(Rerr);
+  Werr = Cnow * calcAngularVelocity(Rerr);
 
   return Werr;
 }
