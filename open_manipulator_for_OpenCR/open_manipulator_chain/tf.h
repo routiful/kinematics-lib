@@ -25,11 +25,19 @@
 #include <Eigen.h>        // Calls main Eigen matrix class library
 #include <Eigen/LU>       // Calls inverse, determinant, LU decomp., etc.
 
+#include "link.h"
+
 #define DEG2RAD (M_PI / 180.0)
 #define RAD2DEG (180.0 / M_PI)
 
 namespace open_manipulator
 {
+struct Pose
+{
+  Eigen::Vector3f position;
+  Eigen::Matrix3f orientation;
+};
+
 class TF
 {
  public:
@@ -43,6 +51,7 @@ class TF
   Eigen::Vector3f calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow);
   Eigen::Vector3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow);
   Eigen::Vector3f calcAngularVelocity(Eigen::Matrix3f R);
+  Eigen::MatrixXf calcJacobian(Link* link, Pose goal_pose, uint8_t joint_num);
 };
 }
 

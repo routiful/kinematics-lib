@@ -160,3 +160,28 @@ Eigen::Vector3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
 
   return Werr;
 }
+
+Eigen::MatrixXf calcJacobian(Link* link, Pose goal_pose, uint8_t joint_num)
+{
+  Eigen::MatrixXf J(6,joint_num);
+  Eigen::Vector3f joint_axes = Eigen::Vector3f::Zero();
+  Eigen::Vector3f position_changed = Eigen::Vector3f::Zero();
+  Eigen::Vector3f orientation_changed = Eigen::Vector3f::Zero();
+  Eigen::VectorXf pose_changed = Eigen::VectorXf::Zero();
+
+  for (int id = 0; id <= joint_num; id++)
+  {
+    uint8_t mother = link[id].mother_;
+    joint_axes = link[mother].R_ * link[id].a_;
+
+    position_changed = skew(joint_axes) * (goal_pose.position - link[id].p_);
+    orientation_changed = joint_axis;
+
+    pose_changed << position_changed(0), position_changed(1), position_changed(2),
+                    orientation_changed(0), orientation_changed(1), orientation_changed(2);
+
+    J.col(id) = pose_changed;
+  }
+
+  return J;
+}

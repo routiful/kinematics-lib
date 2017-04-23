@@ -42,13 +42,7 @@ HardwareTimer serial_timer(TIMER_CH1);
 open_manipulator::Link link[JOINT_NUM+2];
 open_manipulator::TF tf;
 
-struct Pose
-{
-  Eigen::Vector3f position;
-  Eigen::Matrix3f orientation;
-};
-
-Pose start_pose, goal_pose;
+open_manipulator::Pose start_pose, goal_pose;
 
 void setup()
 {
@@ -122,7 +116,7 @@ void forwardKinematics(int8_t me)
 /*******************************************************************************
 * Inverse kinematics (Analytical Method)
 *******************************************************************************/
-void inverseKinematics(Pose goal_pose)
+void inverseKinematics(open_manipulator::Pose goal_pose)
 {
   Eigen::Vector3f r;
   float A = 0.0, B = 0.0, C = 0.0, alpha = 0.0;
@@ -188,9 +182,9 @@ void inverseKinematics(Pose goal_pose)
 /*******************************************************************************
 * Inverse kinematics (Numerical Method)
 *******************************************************************************/
-void inverseKinematics(Pose start_pose, Pose goal_pose)
+void inverseKinematics(open_manipulator::Pose start_pose, open_manipulator::Pose goal_pose)
 {
-  float lambda = 0.5;
+  float lambda = 0.5; // To stabilize the numeric calculation (0 1]
   Eigen::MatrixXf J(6,4);
   Eigen::Vector3f Verr, Werr;
   Eigen::VectorXf VWerr(6);
@@ -211,7 +205,7 @@ void inverseKinematics(Pose start_pose, Pose goal_pose)
       return;
     }
 
-    Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
+    // Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
     // dq = dec.solve(VWerr);
 
     // dq = lambda * (J.ColPivHouseholderQR().solve(VWerr));
