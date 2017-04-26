@@ -19,6 +19,8 @@
 #include "link.h"
 #include "tf.h"
 
+#include <Eigen/Dense>
+
 // #define DEBUG
 #define SIMULATION
 
@@ -34,7 +36,7 @@
 #define JOINT4 4
 #define END    5
 
-float joint_angle[6] = {0.0, 0.0, 60.0*DEG2RAD, -30.0*DEG2RAD, -30.0*DEG2RAD, 0.0};
+float joint_angle[6] = {0.0, 0.0, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0};
 float gripper_pos = GRIPPER_OFF;
 
 HardwareTimer serial_timer(TIMER_CH1);
@@ -59,7 +61,7 @@ void setup()
   setJointAngle(joint_angle);
   forwardKinematics(BASE);
 
-#ifdef DEBUG
+#if DEBUG
   for (uint8_t num = BASE; num <= END; num++)
   {
     Serial.print("link : "); Serial.println(link[num].name_);
@@ -68,10 +70,13 @@ void setup()
   }
 #endif
 
+  start_pose.position << 0.228, 0.000, 0.198;
+  start_pose.orientation == Eigen::Matrix3f::Identity();
+
   goal_pose.position << 0.095, 0.000, 0.218;
   goal_pose.orientation = Eigen::Matrix3f::Identity();
 
-  inverseKinematics(goal_pose);
+  numericalInverseKinematics(start_pose, goal_pose);
 }
 
 void loop()
@@ -116,7 +121,7 @@ void forwardKinematics(int8_t me)
 /*******************************************************************************
 * Inverse kinematics (Analytical Method)
 *******************************************************************************/
-void inverseKinematics(open_manipulator::Pose goal_pose)
+void analyticalInverseKinematics(open_manipulator::Pose goal_pose)
 {
   Eigen::Vector3f r;
   float A = 0.0, B = 0.0, C = 0.0, alpha = 0.0;
@@ -182,7 +187,7 @@ void inverseKinematics(open_manipulator::Pose goal_pose)
 /*******************************************************************************
 * Inverse kinematics (Numerical Method)
 *******************************************************************************/
-void inverseKinematics(open_manipulator::Pose start_pose, open_manipulator::Pose goal_pose)
+void numericalInverseKinematics(open_manipulator::Pose start_pose, open_manipulator::Pose goal_pose)
 {
   float lambda = 0.5; // To stabilize the numeric calculation (0 1]
   Eigen::MatrixXf J(6,4);
@@ -194,7 +199,7 @@ void inverseKinematics(open_manipulator::Pose start_pose, open_manipulator::Pose
 
   for (int i = 0; i < 10; i++)
   {
-    //J = tf.calcJacobian();
+    J = tf.calcJacobian(link, goal_pose, 4);
     Verr = tf.calcVerr(start_pose.position, goal_pose.position);
     Werr = tf.calcWerr(start_pose.orientation, goal_pose.orientation);
     VWerr << Verr(0), Verr(1), Verr(2),
@@ -205,8 +210,8 @@ void inverseKinematics(open_manipulator::Pose start_pose, open_manipulator::Pose
       return;
     }
 
-    // Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
-    // dq = dec.solve(VWerr);
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
+    dq = lambda * dec.solve(VWerr);
 
     // dq = lambda * (J.ColPivHouseholderQR().solve(VWerr));
 
@@ -216,6 +221,13 @@ void inverseKinematics(open_manipulator::Pose start_pose, open_manipulator::Pose
     }
     forwardKinematics(BASE);
   }
+
+#ifdef DEBUG
+  Serial.println(joint_angle[JOINT1]*RAD2DEG);
+  Serial.println(joint_angle[JOINT2]*RAD2DEG);
+  Serial.println(joint_angle[JOINT3]*RAD2DEG);
+  Serial.println(joint_angle[JOINT4]*RAD2DEG);
+#endif
 }
 
 /*******************************************************************************

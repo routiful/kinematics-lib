@@ -45,8 +45,9 @@ class TF
   ~TF();
 
   Eigen::Matrix3f skew(Eigen::Vector3f v);
-  Eigen::Matrix3f calcRodrigues(Eigen::Vector3f axis, float angle);
   float sign(float num);
+
+  Eigen::Matrix3f calcRodrigues(Eigen::Vector3f axis, float angle);
   Eigen::Matrix3f calcRotationMatrix(String notation, float angle);
   Eigen::Vector3f calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow);
   Eigen::Vector3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow);

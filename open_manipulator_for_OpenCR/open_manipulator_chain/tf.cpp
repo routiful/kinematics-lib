@@ -35,6 +35,18 @@ Eigen::Matrix3f TF::skew(Eigen::Vector3f v)
   return skew_symmetric_matrix;
 }
 
+float TF::sign(float num)
+{
+  if (num >= 0.0)
+  {
+    return 1.0;
+  }
+  else
+  {
+    return -1.0;
+  }
+}
+
 Eigen::Matrix3f TF::calcRodrigues(Eigen::Vector3f axis, float angle)
 {
   Eigen::Matrix3f skew_symmetric_matrix = Eigen::Matrix3f::Zero();
@@ -47,18 +59,6 @@ Eigen::Matrix3f TF::calcRodrigues(Eigen::Vector3f axis, float angle)
                     skew_symmetric_matrix * skew_symmetric_matrix * (1 - cos(angle));
 
   return rotation_matrix;
-}
-
-float TF::sign(float num)
-{
-  if (num >= 0.0)
-  {
-    return 1.0;
-  }
-  else
-  {
-    return -1.0;
-  }
 }
 
 Eigen::Matrix3f TF::calcRotationMatrix(String notation, float angle)
@@ -95,7 +95,7 @@ Eigen::Matrix3f TF::calcRotationMatrix(String notation, float angle)
   return rotation_matrix;
 }
 
-Eigen::Vector3f calcAngularVelocity(Eigen::Matrix3f R)
+Eigen::Vector3f TF::calcAngularVelocity(Eigen::Matrix3f R)
 {
   Eigen::Vector3f l = Eigen::Vector3f::Zero();
   Eigen::Vector3f w = Eigen::Vector3f::Zero();
@@ -141,7 +141,7 @@ Eigen::Vector3f calcAngularVelocity(Eigen::Matrix3f R)
   return w;
 }
 
-Eigen::Vector3f calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
+Eigen::Vector3f TF::calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
 {
   Eigen::Vector3f Verr;
 
@@ -150,7 +150,7 @@ Eigen::Vector3f calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
   return Verr;
 }
 
-Eigen::Vector3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
+Eigen::Vector3f TF::calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
 {
   Eigen::Matrix3f Rerr;
   Eigen::Vector3f Werr;
@@ -161,20 +161,20 @@ Eigen::Vector3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
   return Werr;
 }
 
-Eigen::MatrixXf calcJacobian(Link* link, Pose goal_pose, uint8_t joint_num)
+Eigen::MatrixXf TF::calcJacobian(Link* link, Pose goal_pose, uint8_t joint_num)
 {
   Eigen::MatrixXf J(6,joint_num);
-  Eigen::Vector3f joint_axes = Eigen::Vector3f::Zero();
+  Eigen::Vector3f joint_axis = Eigen::Vector3f::Zero();
   Eigen::Vector3f position_changed = Eigen::Vector3f::Zero();
   Eigen::Vector3f orientation_changed = Eigen::Vector3f::Zero();
-  Eigen::VectorXf pose_changed = Eigen::VectorXf::Zero();
+  Eigen::VectorXf pose_changed = Eigen::VectorXf::Zero(6);
 
   for (int id = 0; id <= joint_num; id++)
   {
     uint8_t mother = link[id].mother_;
-    joint_axes = link[mother].R_ * link[id].a_;
+    joint_axis = link[mother].R_ * link[id].a_;
 
-    position_changed = skew(joint_axes) * (goal_pose.position - link[id].p_);
+    position_changed = skew(joint_axis) * (goal_pose.position - link[id].p_);
     orientation_changed = joint_axis;
 
     pose_changed << position_changed(0), position_changed(1), position_changed(2),
