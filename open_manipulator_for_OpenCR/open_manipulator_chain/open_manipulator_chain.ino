@@ -61,7 +61,7 @@ void setup()
   setJointAngle(joint_angle);
   forwardKinematics(BASE);
 
-#if DEBUG
+#ifdef DEBUG
   for (uint8_t num = BASE; num <= END; num++)
   {
     Serial.print("link : "); Serial.println(link[num].name_);
@@ -76,7 +76,8 @@ void setup()
   goal_pose.position << 0.095, 0.000, 0.218;
   goal_pose.orientation = Eigen::Matrix3f::Identity();
 
-  numericalInverseKinematics(start_pose, goal_pose);
+  analyticalInverseKinematics(goal_pose);
+  //numericalInverseKinematics(start_pose, goal_pose);
 }
 
 void loop()
@@ -212,8 +213,6 @@ void numericalInverseKinematics(open_manipulator::Pose start_pose, open_manipula
 
     Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
     dq = lambda * dec.solve(VWerr);
-
-    // dq = lambda * (J.ColPivHouseholderQR().solve(VWerr));
 
     for (int id = JOINT1; id <= JOINT4; i++)
     {
