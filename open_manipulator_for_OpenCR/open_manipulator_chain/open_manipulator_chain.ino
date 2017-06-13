@@ -21,8 +21,8 @@
 
 #include <Eigen/Dense>
 
-// #define DEBUG
-#define SIMULATION
+#define DEBUG
+// #define SIMULATION
 
 #define COMMUNICATION_RATE  300
 #define GRIPPER_ON          -10.0
@@ -36,7 +36,7 @@
 #define JOINT4 4
 #define END    5
 
-float joint_angle[6] = {0.0, 0.0, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0};
+float joint_angle[6] = {0.0, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0};
 float gripper_pos = GRIPPER_OFF;
 
 HardwareTimer serial_timer(TIMER_CH1);
@@ -44,7 +44,7 @@ HardwareTimer serial_timer(TIMER_CH1);
 open_manipulator::Link link[JOINT_NUM+2];
 open_manipulator::TF tf;
 
-open_manipulator::Pose start_pose, goal_pose;
+open_manipulator::Pose init_pose, target_pose;
 
 void setup()
 {
@@ -70,14 +70,17 @@ void setup()
   }
 #endif
 
-  start_pose.position << 0.228, 0.000, 0.198;
-  start_pose.orientation == Eigen::Matrix3f::Identity();
+  init_pose.position << 0.228, 0.000, 0.198;
+  init_pose.orientation == Eigen::Matrix3f::Identity();
 
-  goal_pose.position << 0.095, 0.000, 0.218;
-  goal_pose.orientation = Eigen::Matrix3f::Identity();
+  target_pose.position << 0.212, 0.000, 0.153;
+  target_pose.orientation << 0.766, 0.000, 0.643,
+0.000, 1.000, 0.000,
+-0.643, 0.000, 0.766;
 
-  analyticalInverseKinematics(goal_pose);
-  //numericalInverseKinematics(start_pose, goal_pose);
+
+  analyticalInverseKinematics(target_pose);
+  //numericalInverseKinematics(init_pose, target_pose);
 }
 
 void loop()
@@ -129,10 +132,12 @@ void analyticalInverseKinematics(open_manipulator::Pose goal_pose)
   float result_of_cosine_rule = 0.0;
 
   r = goal_pose.orientation.transpose() * (link[JOINT3].p_ - goal_pose.position);
-  C = r.norm();
+
   A = (link[JOINT4].p_ - link[JOINT3].p_).norm();
   B = (link[END].p_ - link[JOINT4].p_).norm();
-  result_of_cosine_rule = (A*A + B*B - C*C) / (2.0 * A * B);
+  C = r.norm();
+
+  result_of_cosine_rule = (C*C - A*A - B*B) / (2.0 * A * B);
 
   if (result_of_cosine_rule >= 1.0)
   {
@@ -140,18 +145,20 @@ void analyticalInverseKinematics(open_manipulator::Pose goal_pose)
   }
   else if (result_of_cosine_rule <= -1.0)
   {
-    joint_angle[JOINT4] = 0.0;
+    joint_angle[JOINT4] = M_PI;
   }
   else
   {
-    joint_angle[JOINT4] = acos(result_of_cosine_rule) - M_PI;
+    joint_angle[JOINT4] = acos(result_of_cosine_rule);
   }
 
   r = link[JOINT4].R_.transpose() * (link[JOINT2].p_ - link[JOINT4].p_);
-  C = r.norm();
+
   A = (link[JOINT3].p_ - link[JOINT2].p_).norm();
   B = (link[JOINT4].p_ - link[JOINT3].p_).norm();
-  result_of_cosine_rule = (A*A + B*B - C*C) / (2.0 * A * B);
+  C = r.norm();
+
+  result_of_cosine_rule = (C*C - A*A - B*B) / (2.0 * A * B);
 
   if (result_of_cosine_rule >= 1.0)
   {
@@ -159,28 +166,35 @@ void analyticalInverseKinematics(open_manipulator::Pose goal_pose)
   }
   else if (result_of_cosine_rule <= -1.0)
   {
-    joint_angle[JOINT3] = 0.0;
+    joint_angle[JOINT3] = M_PI;
   }
   else
   {
-    joint_angle[JOINT3] = acos(result_of_cosine_rule) - (100.2 * DEG2RAD);
+    joint_angle[JOINT3] = acos(result_of_cosine_rule);
   }
 
-  Eigen::Matrix3f R = Eigen::Matrix3f::Identity();
-  R = link[BASE].R_.transpose() *
-      link[END].R_ *
-      tf.calcRotationMatrix("pitch", joint_angle[JOINT3]).transpose() *
-      tf.calcRotationMatrix("pitch", joint_angle[JOINT4]).transpose();
+  // alpha = asin((A/C) * sin(M_PI-joint_angle[JOINT3]));
+  // joint_angle[JOINT4] = -atan2(r(0), tf.sign(r(2)) * sqrt(r(1)*r(1) + r(2)*r(2)))-alpha;
 
-  joint_angle[JOINT2] = atan2(R(0,2), R(0,0));
-  joint_angle[JOINT1] = atan2(R(1,0), R(0,0));
+  Eigen::Matrix3f R = Eigen::Matrix3f::Identity();
+  R =   link[BASE].R_.transpose()
+      * link[END].R_
+      * tf.calcRotationMatrix("pitch", joint_angle[JOINT3]).transpose()
+      * tf.calcRotationMatrix("pitch", joint_angle[JOINT4]).transpose();
+
+  joint_angle[JOINT2] = atan2(R(1,2), R(1,0));
+  joint_angle[JOINT1] = atan2(R(1,2), R(0,2));
 
   setJointAngle(joint_angle);
 
 #ifdef DEBUG
+  Serial.print("joint1 : ");
   Serial.println(joint_angle[JOINT1]*RAD2DEG);
+  Serial.print("joint2 : ");
   Serial.println(joint_angle[JOINT2]*RAD2DEG);
+  Serial.print("joint3 : ");
   Serial.println(joint_angle[JOINT3]*RAD2DEG);
+  Serial.print("joint4 : ");
   Serial.println(joint_angle[JOINT4]*RAD2DEG);
 #endif
 }

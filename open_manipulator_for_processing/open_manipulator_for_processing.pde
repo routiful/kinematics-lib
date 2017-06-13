@@ -28,7 +28,7 @@ void setup()
   initShape();
   initView();
   
-  connectOpenCR(3);
+  connectOpenCR(0);
 }
 
 void draw()

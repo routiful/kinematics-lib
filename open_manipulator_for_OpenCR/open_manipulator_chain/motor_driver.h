@@ -58,10 +58,10 @@ class MotorDriver
   bool setTorque(bool onoff);
 
   uint16_t* readPosition();
-  bool motorControl(uint16_t *set_joint_value);
+  bool motorControl(uint32_t *set_joint_value);
 
   uint16_t* convertRadian2Value(float* radian);
-  float* convertValue2Radian(uint16_t* value);
+  float* convertValue2Radian(uint32_t* value);
 
  private:
   int8_t motor_num_;

@@ -131,7 +131,7 @@ uint16_t* MotorDriver::readPosition()
   return present_position_value;
 }
 
-bool MotorDriver::motorControl(uint16_t* set_joint_value)
+bool MotorDriver::motorControl(uint32_t* set_joint_value)
 {
   bool dxl_addparam_result_;
   int8_t dxl_comm_result_;
@@ -203,7 +203,7 @@ uint16_t* MotorDriver::convertRadian2Value(float* radian)
   return present_position_value;
 }
 
-float* MotorDriver::convertValue2Radian(uint16_t* value)
+float* MotorDriver::convertValue2Radian(uint32_t* value)
 {
   for (int id = 1; id <= motor_num_; id++)
   {
