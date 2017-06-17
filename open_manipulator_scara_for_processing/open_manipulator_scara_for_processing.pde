@@ -90,7 +90,7 @@ void initShape()
   link2 = loadShape("meshes/scara/link2.obj");
   link3 = loadShape("meshes/scara/link3.obj");
 
-  setJointAngle(0.8,0.8, 0, 0);
+  setJointAngle(0, 0, 0, 0);
 }
 
 void connectOpenCR(int port_num)
@@ -135,13 +135,13 @@ void drawManipulator()
   shape(link1);
   drawLocalFrame();
 
-  translate(0, 0, 74.5);
+  translate(0, 0, 94.5);
   rotateZ(-joint_angle[0]);
   shape(link2);
   drawLocalFrame();
 
-  translate(0, 133.6, 0);
-  rotateY(-joint_angle[1]);
+  translate(0, 136, 0);
+  rotateZ(-joint_angle[1]);
   shape(link3);
   drawLocalFrame();
   
