@@ -32,7 +32,7 @@
 
 namespace open_manipulator
 {
-  
+
 typedef struct
 {
   Eigen::Vector3f position;
@@ -48,12 +48,12 @@ class Calc
   Eigen::Matrix3f skew(Eigen::Vector3f v);
   float sign(float num);
 
-  Eigen::Matrix3f calcRodrigues(Eigen::Vector3f axis, float angle);
-  Eigen::Matrix3f calcRotationMatrix(String notation, float angle);
-  Eigen::Vector3f calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow);
-  Eigen::Vector3f calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow);
-  Eigen::Vector3f calcAngularVelocity(Eigen::Matrix3f R);
-  Eigen::MatrixXf calcJacobian(Link* link, Pose goal_pose, uint8_t joint_num);
+  Eigen::Matrix3f Rodrigues(Eigen::Vector3f axis, float angle);
+  Eigen::Matrix3f RotationMatrix(String notation, float angle);
+  Eigen::Vector3f Verr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow);
+  Eigen::Vector3f Werr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow);
+  Eigen::Vector3f AngularVelocity(Eigen::Matrix3f R);
+  Eigen::MatrixXf Jacobian(Link* link, Pose goal_pose, uint8_t joint_num);
 };
 }
 

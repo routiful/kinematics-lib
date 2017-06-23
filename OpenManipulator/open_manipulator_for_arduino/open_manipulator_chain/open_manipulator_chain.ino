@@ -37,12 +37,12 @@
 #define END    5
 
 float joint_angle[6] = {0.0, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0};
-float gripper_pos = GRIPPER_OFF;
+float gripper_pos    = GRIPPER_OFF;
 
 HardwareTimer serial_timer(TIMER_CH1);
 
 open_manipulator::Link link[JOINT_NUM+2];
-open_manipulator::Calc tf;
+open_manipulator::Calc calc;
 
 open_manipulator::Pose init_pose, target_pose;
 
@@ -70,13 +70,13 @@ void setup()
   }
 #endif
 
-  init_pose.position << 0.227, 0.000, 0.210;
+  init_pose.position    << 0.227, 0.000, 0.210;
   init_pose.orientation == Eigen::Matrix3f::Identity();
 
-  target_pose.position << 0.081, 0.000, 0.248;    // (60, -20, -30)
-  target_pose.orientation << 0.985, 0.000, -0.174,
-                             0.000, 1.000, 0.000,
-                             0.174, 0.000, 0.985;
+  target_pose.position    << 0.141, 0.000, 0.260;   // (0, 30, 20)
+  target_pose.orientation << 0.643, 0.000, -0.766,
+0.000, 1.000, 0.000,
+0.766, 0.000, 0.643;
 
   analyticalInverseKinematics(target_pose);
   //numericalInverseKinematics(init_pose, target_pose);
@@ -114,7 +114,7 @@ void forwardKinematics(int8_t me)
   {
     mother = link[me].mother_;
     link[me].p_ = link[mother].R_ * link[me].b_ + link[mother].p_;
-    link[me].R_ = link[mother].R_ * tf.calcRodrigues(link[me].a_, link[me].q_);
+    link[me].R_ = link[mother].R_ * calc.Rodrigues(link[me].a_, link[me].q_);
   }
 
   forwardKinematics(link[me].sibling_);
@@ -126,71 +126,70 @@ void forwardKinematics(int8_t me)
 *******************************************************************************/
 void analyticalInverseKinematics(open_manipulator::Pose goal_pose)
 {
-  float psi = 0.0, alpha = 0.0;
-  float A = 0.0, B = 0.0, C = 0.0, D = 0.0;
+  Eigen::Vector3f r;
+  float A = 0.0, B = 0.0, C = 0.0;
+  float result_of_cosine_rule = 0.0;
 
-  psi = atan2(goal_pose.position(1), goal_pose.position(0));
+  r = link[JOINT4].R_.transpose() * (link[JOINT2].p_ - link[JOINT4].p_);
+
+  A = (link[JOINT3].p_ - link[JOINT2].p_).norm();
+  B = (link[JOINT4].p_ - link[JOINT3].p_).norm();
+  C = r.norm() * r.norm();
+
+  result_of_cosine_rule = (C - A*A - B*B) / (2.0 * A * B);
+
+  if (result_of_cosine_rule >= 1.0)
+  {
+    joint_angle[JOINT3] = 0.0 - ((90.0-10.22) * DEG2RAD);
+  }
+  else if (result_of_cosine_rule <= -1.0)
+  {
+    joint_angle[JOINT3] = M_PI - ((90.0-10.22) * DEG2RAD);
+  }
+  else
+  {
+    joint_angle[JOINT3] = acos(result_of_cosine_rule) - ((90.0-10.22) * DEG2RAD);
+  }
+
+  Serial.println(result_of_cosine_rule);
+  Serial.println(acos(result_of_cosine_rule));
+  Serial.println(" ");
+
+  r = goal_pose.orientation.transpose() * (link[JOINT3].p_ - goal_pose.position);
 
   A = (link[JOINT4].p_ - link[JOINT3].p_).norm();
   B = (link[END].p_ - link[JOINT4].p_).norm();
-  C = (link[END].p_ - link[JOINT3].p_).norm();
+  C = r.norm() * r.norm();
 
-  D = (A*A + C*C - B*B) / (2.0*A*C);
+  result_of_cosine_rule = (C - A*A - B*B) / (2.0 * A * B);
 
-  alpha = atan2(sqrt(1-(D*D)), D);
+  if (result_of_cosine_rule >= 1.0)
+  {
+    joint_angle[JOINT4] = M_PI - 0.0;
+  }
+  else if (result_of_cosine_rule <= -1.0)
+  {
+    joint_angle[JOINT4] = M_PI - M_PI;
+  }
+  else
+  {
+    joint_angle[JOINT4] = M_PI - acos(result_of_cosine_rule);
+  }
 
-  joint_angle[JOINT3] = psi + alpha;
+  if (calc.sign(joint_angle[JOINT3]) == 1.0)
+  {
+    if (calc.sign(joint_angle[JOINT4]) == 1.0)
+      joint_angle[JOINT4] = joint_angle[JOINT4] * -1;
+  }
+  else
+  {
+    if (calc.sign(joint_angle[JOINT4]) == 1.0)
+      joint_angle[JOINT4] = joint_angle[JOINT4];
+  }
 
-  // Eigen::Vector3f r;
-  // float A = 0.0, B = 0.0, C = 0.0;
-  // float result_of_cosine_rule = 0.0;
-  //
-  // r = goal_pose.orientation.transpose() * (link[JOINT3].p_ - goal_pose.position);
-  //
-  // A = (link[JOINT4].p_ - link[JOINT3].p_).norm();
-  // B = (link[END].p_ - link[JOINT4].p_).norm();
-  // C = r.norm();
-  //
-  // result_of_cosine_rule = (A*A + B*B - C*C) / (2.0 * A * B);
-  //
-  // joint_angle[JOINT4] = M_PI - atan2(sqrt(1-result_of_cosine_rule * result_of_cosine_rule), result_of_cosine_rule);
-
-  // if (result_of_cosine_rule >= 1.0)
-  // {
-  //   alpha = 0.0;
-  // }
-  // else if (result_of_cosine_rule <= -1.0)
-  // {
-  //   alpha = M_PI;
-  // }
-  // else
-  // {
-  //   alpha = acos(result_of_cosine_rule);
-  // }
-
-  // r = link[JOINT4].R_.transpose() * (link[JOINT2].p_ - link[JOINT4].p_);
-  //
-  // A = (link[JOINT3].p_ - link[JOINT2].p_).norm();
-  // B = (link[JOINT4].p_ - link[JOINT3].p_).norm();
-  // C = r.norm();
-  //
-  // result_of_cosine_rule = (C*C - A*A - B*B) / (2.0 * A * B);
-  //
-  // if (result_of_cosine_rule >= 1.0)
-  // {
-  //   joint_angle[JOINT3] = 0.0;
-  // }
-  // else if (result_of_cosine_rule <= -1.0)
-  // {
-  //   joint_angle[JOINT3] = M_PI;
-  // }
-  // else
-  // {
-  //   joint_angle[JOINT3] = acos(result_of_cosine_rule);
-  // }
-
-  // alpha = asin((A/C) * sin(M_PI-joint_angle[JOINT3]));
-  // joint_angle[JOINT4] = -atan2(r(0), tf.sign(r(2)) * sqrt(r(1)*r(1) + r(2)*r(2)))-alpha;
+  Serial.println(result_of_cosine_rule);
+  Serial.println(acos(result_of_cosine_rule));
+  Serial.println(" ");
 
   // Eigen::Matrix3f R = Eigen::Matrix3f::Identity();
   // R =   link[BASE].R_.transpose()
@@ -230,9 +229,9 @@ void numericalInverseKinematics(open_manipulator::Pose start_pose, open_manipula
 
   for (int i = 0; i < 10; i++)
   {
-    J = tf.calcJacobian(link, goal_pose, 4);
-    Verr = tf.calcVerr(start_pose.position, goal_pose.position);
-    Werr = tf.calcWerr(start_pose.orientation, goal_pose.orientation);
+    J = calc.Jacobian(link, goal_pose, 4);
+    Verr = calc.Verr(start_pose.position, goal_pose.position);
+    Werr = calc.Werr(start_pose.orientation, goal_pose.orientation);
     VWerr << Verr(0), Verr(1), Verr(2),
              Werr(0), Werr(1), Werr(2);
 

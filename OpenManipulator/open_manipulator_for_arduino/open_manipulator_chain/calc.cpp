@@ -47,7 +47,7 @@ float Calc::sign(float num)
   }
 }
 
-Eigen::Matrix3f Calc::calcRodrigues(Eigen::Vector3f axis, float angle)
+Eigen::Matrix3f Calc::Rodrigues(Eigen::Vector3f axis, float angle)
 {
   Eigen::Matrix3f skew_symmetric_matrix = Eigen::Matrix3f::Zero();
   Eigen::Matrix3f rotation_matrix = Eigen::Matrix3f::Zero();
@@ -61,7 +61,7 @@ Eigen::Matrix3f Calc::calcRodrigues(Eigen::Vector3f axis, float angle)
   return rotation_matrix;
 }
 
-Eigen::Matrix3f Calc::calcRotationMatrix(String notation, float angle)
+Eigen::Matrix3f Calc::RotationMatrix(String notation, float angle)
 {
   String roll  = "roll";
   String pitch = "pitch";
@@ -95,7 +95,7 @@ Eigen::Matrix3f Calc::calcRotationMatrix(String notation, float angle)
   return rotation_matrix;
 }
 
-Eigen::Vector3f Calc::calcAngularVelocity(Eigen::Matrix3f R)
+Eigen::Vector3f Calc::AngularVelocity(Eigen::Matrix3f R)
 {
   Eigen::Vector3f l = Eigen::Vector3f::Zero();
   Eigen::Vector3f w = Eigen::Vector3f::Zero();
@@ -141,7 +141,7 @@ Eigen::Vector3f Calc::calcAngularVelocity(Eigen::Matrix3f R)
   return w;
 }
 
-Eigen::Vector3f Calc::calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
+Eigen::Vector3f Calc::Verr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
 {
   Eigen::Vector3f Verr;
 
@@ -150,18 +150,18 @@ Eigen::Vector3f Calc::calcVerr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
   return Verr;
 }
 
-Eigen::Vector3f Calc::calcWerr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
+Eigen::Vector3f Calc::Werr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
 {
   Eigen::Matrix3f Rerr;
   Eigen::Vector3f Werr;
 
   Rerr = Cnow.transpose() * Cref;
-  Werr = Cnow * calcAngularVelocity(Rerr);
+  Werr = Cnow * AngularVelocity(Rerr);
 
   return Werr;
 }
 
-Eigen::MatrixXf Calc::calcJacobian(Link* link, Pose goal_pose, uint8_t joint_num)
+Eigen::MatrixXf Calc::Jacobian(Link* link, Pose goal_pose, uint8_t joint_num)
 {
   Eigen::MatrixXf J(6,joint_num);
   Eigen::Vector3f joint_axis = Eigen::Vector3f::Zero();
