@@ -16,32 +16,45 @@
 
 /* Authors: Darby Lim */
 
-#ifndef TF_H_
-#define TF_H_
-
-#include <Eigen.h>        // Calls main Eigen matrix class library
-#include <Eigen/LU>       // Calls inverse, determinant, LU decomp., etc.
+#ifndef CALC_H_
+#define CALC_H_
 
 #include <Arduino.h>
 #include <math.h>
 
+#include <Eigen.h>        // Calls main Eigen matrix class library
+#include <Eigen/LU>       // Calls inverse, determinant, LU decomp., etc.
+
+#include "link.h"
 
 #define DEG2RAD (M_PI / 180.0)
 #define RAD2DEG (180.0 / M_PI)
 
 namespace open_manipulator
 {
-class TF
+
+typedef struct
+{
+  Eigen::Vector3f position;
+  Eigen::Matrix3f orientation;
+} Pose;
+
+class Calc
 {
  public:
-  TF();
-  ~TF();
+  Calc();
+  ~Calc();
 
   Eigen::Matrix3f skew(Eigen::Vector3f v);
-  Eigen::Matrix3f calcRodrigues(Eigen::Vector3f axis, float angle);
   float sign(float num);
-  Eigen::Matrix3f calcRotationMatrix(String notation, float angle);
+
+  Eigen::Matrix3f Rodrigues(Eigen::Vector3f axis, float angle);
+  Eigen::Matrix3f RotationMatrix(String notation, float angle);
+  Eigen::Vector3f Verr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow);
+  Eigen::Vector3f Werr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow);
+  Eigen::Vector3f AngularVelocity(Eigen::Matrix3f rotation_matrix);
+  Eigen::MatrixXf Jacobian(Link* link, Pose goal_pose, uint8_t link_num);
 };
 }
 
-#endif // TF_H_
+#endif // CALC_H_

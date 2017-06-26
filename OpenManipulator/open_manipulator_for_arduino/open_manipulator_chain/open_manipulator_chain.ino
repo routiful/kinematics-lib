@@ -1,5 +1,25 @@
+/*******************************************************************************
+* Copyright 2016 ROBOTIS CO., LTD.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*******************************************************************************/
+
+/* Authors: Darby Lim */
+
 #include "link.h"
-#include "tf.h"
+#include "calc.h"
+
+#include <Eigen/Dense>
 
 #define DEBUG
 // #define SIMULATION
@@ -8,6 +28,7 @@
 #define GRIPPER_ON          -10.0
 #define GRIPPER_OFF         -45.0
 #define JOINT_NUM           4
+#define LINK_NUM            6
 
 #define BASE   0
 #define JOINT1 1
@@ -16,13 +37,14 @@
 #define JOINT4 4
 #define END    5
 
-float joint_angle[6] = {0.0, 0.0, 60.0*DEG2RAD, -30.0*DEG2RAD, -30.0*DEG2RAD, 0.0};
-float gripper_pos = GRIPPER_OFF;
+float joint_angle[6] = {0.0, 0.0, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0};
+float gripper_pos    = GRIPPER_OFF;
 
 HardwareTimer serial_timer(TIMER_CH1);
 
 open_manipulator::Link link[JOINT_NUM+2];
-open_manipulator::TF tf;
+open_manipulator::Calc calc;
+open_manipulator::Pose target_pose;
 
 void setup()
 {
@@ -48,11 +70,13 @@ void setup()
   }
 #endif
 
-  open_manipulator::Link goal_pose;
-  goal_pose.p_ << 0.095, 0.000, 0.218;
-  goal_pose.R_ = Eigen::Matrix3f::Identity();
+  target_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30)
+  target_pose.orientation << 0.940, 0.000, -0.342,
+                              0.000, 1.000, 0.000,
+                              0.342, 0.000, 0.940;
 
-  inverseKinematics(goal_pose);
+
+  inverseKinematics(END, target_pose);
 }
 
 void loop()
@@ -87,7 +111,7 @@ void forwardKinematics(int8_t me)
   {
     mother = link[me].mother_;
     link[me].p_ = link[mother].R_ * link[me].b_ + link[mother].p_;
-    link[me].R_ = link[mother].R_ * tf.calcRodrigues(link[me].a_, link[me].q_);
+    link[me].R_ = link[mother].R_ * calc.Rodrigues(link[me].a_, link[me].q_);
   }
 
   forwardKinematics(link[me].sibling_);
@@ -95,70 +119,47 @@ void forwardKinematics(int8_t me)
 }
 
 /*******************************************************************************
-* Inverse kinematics (Analytical Method)
+* Inverse kinematics (Numerical Method)
 *******************************************************************************/
-void inverseKinematics(open_manipulator::Link goal_pose)
+void inverseKinematics(uint8_t to, open_manipulator::Pose goal_pose)
 {
-  Eigen::Vector3f r;
-  float A = 0.0, B = 0.0, C = 0.0, alpha = 0.0;
-  float result_of_cosine_rule = 0.0;
+  float lambda = 0.7; // To stabilize the numeric calculation (0 1]
+  Eigen::MatrixXf J(6,5);
+  Eigen::Vector3f Verr, Werr;
+  Eigen::VectorXf VWerr(6);
+  Eigen::VectorXf dq(5);
 
-  r = goal_pose.R_.transpose() * (link[JOINT3].p_ - goal_pose.p_);
-  C = r.norm();
-  A = (link[JOINT4].p_ - link[JOINT3].p_).norm();
-  B = (link[END].p_ - link[JOINT4].p_).norm();
-  result_of_cosine_rule = (A*A + B*B - C*C) / (2.0 * A * B);
+  forwardKinematics(BASE);
 
-  if (result_of_cosine_rule >= 1.0)
+  for (int i = 0; i < 10; i++)
   {
-    joint_angle[JOINT4] = 0.0;
-  }
-  else if (result_of_cosine_rule <= -1.0)
-  {
-    joint_angle[JOINT4] = 0.0;
-  }
-  else
-  {
-    joint_angle[JOINT4] = acos(result_of_cosine_rule) - M_PI;
-  }
+    J = calc.Jacobian(link, goal_pose, LINK_NUM);
+    Verr = calc.Verr(goal_pose.position, link[to].p_);
+    Werr = calc.Werr(goal_pose.orientation, link[to].R_);
+    VWerr << Verr(0), Verr(1), Verr(2),
+             Werr(0), Werr(1), Werr(2);
 
-  r = link[JOINT4].R_.transpose() * (link[JOINT2].p_ - link[JOINT4].p_);
-  C = r.norm();
-  A = (link[JOINT3].p_ - link[JOINT2].p_).norm();
-  B = (link[JOINT4].p_ - link[JOINT3].p_).norm();
-  result_of_cosine_rule = (A*A + B*B - C*C) / (2.0 * A * B);
+    if (VWerr.norm() < 1E-6)
+      return;
 
-  if (result_of_cosine_rule >= 1.0)
-  {
-    joint_angle[JOINT3] = 0.0;
-  }
-  else if (result_of_cosine_rule <= -1.0)
-  {
-    joint_angle[JOINT3] = 0.0;
-  }
-  else
-  {
-    joint_angle[JOINT3] = acos(result_of_cosine_rule) - (100.2 * DEG2RAD);
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
+    dq = lambda * dec.solve(VWerr);
+
+    for (int id = JOINT1; id <= JOINT4; id++)
+    {
+      link[id].q_ = link[id].q_ + dq(id-1);
+    }
+    forwardKinematics(BASE);
   }
 
-  Eigen::Matrix3f R = Eigen::Matrix3f::Identity();
-  R = link[BASE].R_.transpose() *
-      link[END].R_ *
-      tf.calcRotationMatrix("pitch", joint_angle[JOINT3]).transpose() *
-      tf.calcRotationMatrix("pitch", joint_angle[JOINT4]).transpose();
-
-  joint_angle[JOINT2] = atan2(R(0,2), R(0,0));
-  joint_angle[JOINT1] = atan2(R(1,0), R(0,0));
-
-  setJointAngle(joint_angle);
-
-#ifdef DEBUG
-  Serial.println(joint_angle[JOINT1]*RAD2DEG);
-  Serial.println(joint_angle[JOINT2]*RAD2DEG);
-  Serial.println(joint_angle[JOINT3]*RAD2DEG);
-  Serial.println(joint_angle[JOINT4]*RAD2DEG);
-#endif
-
+  #ifdef DEBUG
+    Serial.println(VWerr.norm());
+    Serial.println(link[JOINT1].q_*RAD2DEG);
+    Serial.println(link[JOINT2].q_*RAD2DEG);
+    Serial.println(link[JOINT3].q_*RAD2DEG);
+    Serial.println(link[JOINT4].q_*RAD2DEG);
+    Serial.println("");
+  #endif
 }
 
 /*******************************************************************************
@@ -172,7 +173,7 @@ void initLink()
   link[0].child_   = 1;
   link[0].mass_    = 1.0;
   link[0].p_       = Eigen::Vector3f::Zero();
-  link[0].R_       = Eigen::Matrix3f::Identity();
+  link[0].R_       = Eigen::Matrix3f::Identity(3,3);
   link[0].q_       = 0;
   link[0].dq_      = 0;
   link[0].ddq_     = 0;
@@ -187,7 +188,7 @@ void initLink()
   link[1].child_   = 2;
   link[1].mass_    = 1.0;
   link[1].p_       = Eigen::Vector3f::Zero();
-  link[1].R_       = Eigen::Matrix3f::Identity();
+  link[1].R_       = Eigen::Matrix3f::Identity(3,3);
   link[1].q_       = 0.0;
   link[1].dq_      = 0.0;
   link[1].ddq_     = 0.0;
@@ -202,7 +203,7 @@ void initLink()
   link[2].child_   = 3;
   link[2].mass_    = 1.0;
   link[2].p_       = Eigen::Vector3f::Zero();
-  link[2].R_       = Eigen::Matrix3f::Identity();
+  link[2].R_       = Eigen::Matrix3f::Identity(3,3);
   link[2].q_       = 0.0;
   link[2].dq_      = 0.0;
   link[2].ddq_     = 0.0;
@@ -217,7 +218,7 @@ void initLink()
   link[3].child_   = 4;
   link[3].mass_    = 1.0;
   link[3].p_       = Eigen::Vector3f::Zero();
-  link[3].R_       = Eigen::Matrix3f::Identity();
+  link[3].R_       = Eigen::Matrix3f::Identity(3,3);
   link[3].q_       = 0.0;
   link[3].dq_      = 0.0;
   link[3].ddq_     = 0.0;
@@ -232,7 +233,7 @@ void initLink()
   link[4].child_   = 5;
   link[4].mass_    = 1.0;
   link[4].p_       = Eigen::Vector3f::Zero();
-  link[4].R_       = Eigen::Matrix3f::Identity();
+  link[4].R_       = Eigen::Matrix3f::Identity(3,3);
   link[4].q_       = 0.0;
   link[4].dq_      = 0.0;
   link[4].ddq_     = 0.0;
@@ -247,7 +248,7 @@ void initLink()
   link[5].child_   = -1;
   link[5].mass_    = 1.0;
   link[5].p_       = Eigen::Vector3f::Zero();
-  link[5].R_       = Eigen::Matrix3f::Identity();
+  link[5].R_       = Eigen::Matrix3f::Identity(3,3);
   link[5].q_       = 0.0;
   link[5].dq_      = 0.0;
   link[5].ddq_     = 0.0;

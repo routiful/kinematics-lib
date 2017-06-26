@@ -28,7 +28,7 @@ void setup()
   initShape();
   initView();
   
-  connectOpenCR(0);
+  //connectOpenCR(0);
 }
 
 void draw()
@@ -86,13 +86,13 @@ void initView()
 
 void initShape()
 {
-  link1 = loadShape("meshes/link1.obj");
-  link2 = loadShape("meshes/link2.obj");
-  link3 = loadShape("meshes/link3.obj");
-  link4 = loadShape("meshes/link4.obj");
-  link5 = loadShape("meshes/link5.obj");
-  gripper     = loadShape("meshes/link6_l.obj");
-  gripper_sub = loadShape("meshes/link6_r.obj");
+  link1 = loadShape("meshes/chain/link1.obj");
+  link2 = loadShape("meshes/chain/link2.obj");
+  link3 = loadShape("meshes/chain/link3.obj");
+  link4 = loadShape("meshes/chain/link4.obj");
+  link5 = loadShape("meshes/chain/link5.obj");
+  gripper     = loadShape("meshes/chain/link6_l.obj");
+  gripper_sub = loadShape("meshes/chain/link6_r.obj");
 
   setJointAngle(0, 0, 0, 0);
   gripperOff();
@@ -141,22 +141,22 @@ void drawManipulator()
   drawLocalFrame();
 
   translate(12, 0, 36);
-  rotateZ(joint_angle[0]);
+  rotateZ(-joint_angle[0]);
   shape(link2);
   drawLocalFrame();
 
   translate(0, 2, 40);
-  rotateY(joint_angle[1]);
+  rotateY(-joint_angle[1]);
   shape(link3);
   drawLocalFrame();
 
   translate(22, 0 , 122);
-  rotateY(joint_angle[2]);
+  rotateY(-joint_angle[2]);
   shape(link4);
   drawLocalFrame();
 
   translate(124, 0, 0);
-  rotateY(joint_angle[3]);
+  rotateY(-joint_angle[3]);
   shape(link5);
   drawLocalFrame();
 

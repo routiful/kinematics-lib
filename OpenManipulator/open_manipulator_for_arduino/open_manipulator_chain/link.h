@@ -19,9 +19,8 @@
 #ifndef LINK_H_
 #define LINK_H_
 
+#include <Arduino.h>
 #include <Eigen.h>        // Calls main Eigen matrix class library
-
-// #include <arduino.h>
 
 namespace open_manipulator
 {
@@ -55,7 +54,7 @@ class Link
       ddq_(0.0)
   {
     p_ = Eigen::Vector3f::Zero();
-    R_ = Eigen::Matrix3f::Identity();
+    R_ = Eigen::Matrix3f::Identity(3,3);
 
     a_ = Eigen::Vector3f::Zero();
     b_ = Eigen::Vector3f::Zero();
