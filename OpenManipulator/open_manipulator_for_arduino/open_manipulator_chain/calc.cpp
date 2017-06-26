@@ -95,13 +95,14 @@ Eigen::Matrix3f Calc::RotationMatrix(String notation, float angle)
   return rotation_matrix;
 }
 
-Eigen::Vector3f Calc::AngularVelocity(Eigen::Matrix3f R)
+Eigen::Vector3f Calc::AngularVelocity(Eigen::Matrix3f rotation_matrix)
 {
+  Eigen::Matrix3f R = rotation_matrix;
   Eigen::Vector3f l = Eigen::Vector3f::Zero();
   Eigen::Vector3f w = Eigen::Vector3f::Zero();
 
   float theta = 0.0;
-  float diag = 0.0;
+  float diag  = 0.0;
   bool diagonal_matrix = true;
 
   l << R(2,1) - R(1,2),
@@ -126,7 +127,7 @@ Eigen::Vector3f Calc::AngularVelocity(Eigen::Matrix3f R)
 
   if (R == Eigen::Matrix3f::Identity())
   {
-    w  = Eigen::Vector3f::Zero();
+    w = Eigen::Vector3f::Zero();
   }
   else if (diagonal_matrix == true)
   {
@@ -161,26 +162,29 @@ Eigen::Vector3f Calc::Werr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
   return Werr;
 }
 
-Eigen::MatrixXf Calc::Jacobian(Link* link, Pose goal_pose, uint8_t joint_num)
+Eigen::MatrixXf Calc::Jacobian(Link* link, Pose goal_pose, uint8_t link_num)
 {
-  Eigen::MatrixXf J(6,joint_num);
-  Eigen::Vector3f joint_axis = Eigen::Vector3f::Zero();
-  Eigen::Vector3f position_changed = Eigen::Vector3f::Zero();
+  Eigen::MatrixXf J(6,link_num-1);
+  Eigen::VectorXf pose_changed(6);
+  Eigen::Vector3f joint_axis          = Eigen::Vector3f::Zero();
+  Eigen::Vector3f position_changed    = Eigen::Vector3f::Zero();
   Eigen::Vector3f orientation_changed = Eigen::Vector3f::Zero();
-  Eigen::VectorXf pose_changed = Eigen::VectorXf::Zero(6);
 
-  for (int id = 0; id <= joint_num; id++)
+  for (int id = 1; id <= (link_num-1); id++)
   {
     uint8_t mother = link[id].mother_;
-    joint_axis = link[mother].R_ * link[id].a_;
+    if (mother == -1)
+      continue;
 
-    position_changed = skew(joint_axis) * (goal_pose.position - link[id].p_);
+    joint_axis          = link[mother].R_ * link[id].a_;
+
+    position_changed    = skew(joint_axis) * (goal_pose.position - link[id].p_);
     orientation_changed = joint_axis;
 
-    pose_changed << position_changed(0), position_changed(1), position_changed(2),
+    pose_changed <<    position_changed(0),    position_changed(1),    position_changed(2),
                     orientation_changed(0), orientation_changed(1), orientation_changed(2);
 
-    J.col(id) = pose_changed;
+    J.col(id-1) = pose_changed;
   }
 
   return J;
