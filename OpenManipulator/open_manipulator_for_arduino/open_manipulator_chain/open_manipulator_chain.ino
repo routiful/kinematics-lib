@@ -37,7 +37,7 @@
 #define JOINT4 4
 #define END    5
 
-float joint_angle[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+float joint_angle[6] = {0.0, 0.0, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0};
 float gripper_pos    = GRIPPER_OFF;
 
 HardwareTimer serial_timer(TIMER_CH1);
@@ -70,15 +70,11 @@ void setup()
   }
 #endif
 
-  target_pose.position    << 0.216, 0.000, 0.264;   // (0, 0, 20, 0)
+  target_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30)
   target_pose.orientation << 0.940, 0.000, -0.342,
-                             0.000, 1.000, 0.000,
-                             0.342, 0.000, 0.940;
+                              0.000, 1.000, 0.000,
+                              0.342, 0.000, 0.940;
 
-  // target_pose.position    << 0.200, 0.000, 0.200;   // (0, 0, 20, 0)
-  // target_pose.orientation << 0.900, 0.000, -0.300,
-  //                            0.000, 1.000, 0.000,
-  //                            0.300, 0.000, 0.900;
 
   inverseKinematics(END, target_pose);
 }
@@ -127,11 +123,11 @@ void forwardKinematics(int8_t me)
 *******************************************************************************/
 void inverseKinematics(uint8_t to, open_manipulator::Pose goal_pose)
 {
-  float lambda = 0.3; // To stabilize the numeric calculation (0 1]
+  float lambda = 0.7; // To stabilize the numeric calculation (0 1]
   Eigen::MatrixXf J(6,5);
   Eigen::Vector3f Verr, Werr;
   Eigen::VectorXf VWerr(6);
-  Eigen::VectorXf dq(6);
+  Eigen::VectorXf dq(5);
 
   forwardKinematics(BASE);
 
@@ -146,51 +142,24 @@ void inverseKinematics(uint8_t to, open_manipulator::Pose goal_pose)
     if (VWerr.norm() < 1E-6)
       return;
 
-    // for (int i=0; i<5; i++)
-    // {
-    //   Serial.println(J(0,i));
-    //   Serial.println(J(1,i));
-    //   Serial.println(J(2,i));
-    //   Serial.println(J(3,i));
-    //   Serial.println(J(4,i));
-    //   Serial.println(J(5,i));
-    //   Serial.println("");
-    // }
-    //
-    // Serial.println(VWerr(0));
-    // Serial.println(VWerr(1));
-    // Serial.println(VWerr(2));
-    // Serial.println(VWerr(3));
-    // Serial.println(VWerr(4));
-    // Serial.println(VWerr(5));
-    //
-    // Serial.println("");
-
-
     Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
     dq = lambda * dec.solve(VWerr);
 
-    // Serial.println(dq(0));
-    // Serial.println(dq(1));
-    // Serial.println(dq(2));
-    // Serial.println(dq(3));
-    // Serial.println(dq(4));
-    // Serial.println(dq(5));
-
     for (int id = JOINT1; id <= JOINT4; id++)
     {
-      link[id-1].q_ = link[id-1].q_ + dq(id-1);
+      link[id].q_ = link[id].q_ + dq(id-1);
     }
     forwardKinematics(BASE);
-    #ifdef DEBUG
-      Serial.println(VWerr.norm());
-      Serial.println(link[JOINT1].q_*RAD2DEG);
-      Serial.println(link[JOINT2].q_*RAD2DEG);
-      Serial.println(link[JOINT3].q_*RAD2DEG);
-      Serial.println(link[JOINT4].q_*RAD2DEG);
-      Serial.println("");
-    #endif
   }
+
+  #ifdef DEBUG
+    Serial.println(VWerr.norm());
+    Serial.println(link[JOINT1].q_*RAD2DEG);
+    Serial.println(link[JOINT2].q_*RAD2DEG);
+    Serial.println(link[JOINT3].q_*RAD2DEG);
+    Serial.println(link[JOINT4].q_*RAD2DEG);
+    Serial.println("");
+  #endif
 }
 
 /*******************************************************************************
