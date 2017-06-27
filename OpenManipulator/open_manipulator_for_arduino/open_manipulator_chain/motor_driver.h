@@ -16,22 +16,28 @@
 
 /* Authors: Darby Lim */
 
-#ifndef OPEN_MANIPULATOR_JOINT_DRIVER_H_
-#define OPEN_MANIPULATOR_JOINT_DRIVER_H_
+#ifndef OPEN_MANIPULATOR_MOTOR_DRIVER_H_
+#define OPEN_MANIPULATOR_MOTOR_DRIVER_H_
 
 #include <DynamixelSDK.h>
 
 // Control table address (Dynamixel X-series)
-#define ADDR_X_TORQUE_ENABLE            64
-#define ADDR_X_GOAL_POSITION            116
-#define ADDR_X_REALTIME_TICK            120
-#define ADDR_X_PRESENT_POSITION         132
+#define ADDR_X_TORQUE_ENABLE           64
+#define ADDR_X_GOAL_POSITION           116
+#define ADDR_X_GOAL_VELOCITY           104
+#define ADDR_X_GOAL_CURRENT            102
+#define ADDR_X_PRESENT_POSITION        132
+#define ADDR_X_PRESENT_VELOCITY        128
+#define ADDR_X_PRESENT_CURRENT         126
 
 // Data Byte Length
-#define LEN_X_TORQUE_ENABLE             1
-#define LEN_X_GOAL_POSITION             4
-#define LEN_X_REALTIME_TICK             2
-#define LEN_X_PRESENT_POSITION          4
+#define LEN_X_TORQUE_ENABLE            1
+#define LEN_X_GOAL_POSITION            4
+#define LEN_X_GOAL_VELOCITY            4
+#define LEN_X_GOAL_CURRENT             2
+#define LEN_X_PRESENT_POSITION         4
+#define LEN_X_PRESENT_VELOCITY         4
+#define LEN_X_PRESENT_CURRENT          2
 
 #define DEVICENAME                      ""      // no need setting on OpenCR
 
@@ -54,29 +60,41 @@ class MotorDriver
   ~MotorDriver();
 
   bool init(void);
-  void closeDynamixel(void);
-  bool setTorque(bool onoff);
+  void close(void);
 
-  uint16_t* readPosition();
-  bool motorControl(uint32_t *set_joint_value);
+  bool setTorque(uint8_t onoff);
+  bool jointControl(uint32_t *value);
+  bool gripControl (uint32_t *value);
 
-  uint16_t* convertRadian2Value(float* radian);
-  float* convertValue2Radian(uint32_t* value);
+  uint32_t* readPosition();
+
+  uint32_t* convertRadian2Value(float* radian);
+  float*    convertValue2Radian(uint32_t* value);
 
  private:
-  int8_t motor_num_;
+  uint8_t  motor_num_;
+  uint8_t  joint_num_;
+  uint8_t  grip_num_;
+  uint8_t  grip_id_;
+
   uint32_t baud_rate_;
-  float  protocol_version_;
+  float    protocol_version_;
 
-  uint16_t present_position_value[];
-  float present_position_radian[];
+  uint32_t present_position_value[];
+  float    present_position_radian[];
 
-  dynamixel::PortHandler *portHandler_;
+  dynamixel::PortHandler   *portHandler_;
   dynamixel::PacketHandler *packetHandler_;
 
+  dynamixel::GroupSyncWrite *groupSyncWriteTorque_;
   dynamixel::GroupSyncWrite *groupSyncWritePosition_;
-  dynamixel::GroupSyncRead *groupSyncReadEncoder_;
+  dynamixel::GroupSyncWrite *groupSyncWriteVelocity_;
+  dynamixel::GroupSyncWrite *groupSyncWriteCurrent_;
+
+  dynamixel::GroupSyncRead  *groupSyncReadPosition_;
+  dynamixel::GroupSyncRead  *groupSyncReadVelocity_;
+  dynamixel::GroupSyncRead  *groupSyncReadCurrent_;
 };
 }
 
-#endif // OPEN_MANIPULATOR_JOINT_DRIVER_H_
+#endif // OPEN_MANIPULATOR_MOTOR_DRIVER_H_

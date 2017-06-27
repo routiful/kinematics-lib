@@ -50,8 +50,6 @@ public void setup()
   initShape();
   initView();
 
-  // frame.setResizable(true);
-
   //connectOpenCR(0);
 }
 

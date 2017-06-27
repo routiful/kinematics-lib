@@ -20,29 +20,34 @@
 #define OPEN_MANIPULATOR_CHAIN_CONFIG_H_
 
 #include "kinematics.h"
+#include "motor_driver.h"
 #include "debug.h"
 
 #define COMMUNICATION_RATE  300
 #define SERIAL_RATE         57600
+#define BAUE_RATE           1000000
+
+#define PROTOCOL_VERSION    2.0
 
 #define JOINT_NUM           4
+#define GRIP_NUM            1
 #define LINK_NUM            6
 
-#define BASE   0
-#define JOINT1 1
-#define JOINT2 2
-#define JOINT3 3
-#define JOINT4 4
-#define END    5
+#define BASE    0
+#define JOINT1  1
+#define JOINT2  2
+#define JOINT3  3
+#define JOINT4  4
+#define GRIPPER 5
 
-#define GRIPPER_ON          -10.0
-#define GRIPPER_OFF         -45.0
+static float grip_on  = -10.0;
+static float grip_off = -45.0;
 
 float joint_angle[6] = {0.0, 0.0, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0};
 float gripper_pos    = GRIPPER_OFF;
 
-open_manipulator::Link link[LINK_NUM];
-open_manipulator::Kinematics kinematics(LINK_NUM);
-open_manipulator::Pose target_pose;
+open_manipulator::Link         link[LINK_NUM];
+open_manipulator::Kinematics*  kinematics;
+open_manipulator::MotorDriver* motor;
 
 #endif // OPEN_MANIPULATOR_CHAIN_CONFIG_H_

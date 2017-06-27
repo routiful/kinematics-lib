@@ -19,7 +19,7 @@
 #include "open_manipulator_chain_config.h"
 
 #define DEBUG
-// #define DYNAMIXEL
+#define DYNAMIXEL
 // #define SIMULATION
 
 void setup()
@@ -30,29 +30,42 @@ void setup()
 #endif
 
   initLink();
-
-  establishContact();
+  initKinematics();
+#ifdef DYNAMIXEL
+  initMotorDriver();
+#endif
 
   setJointAngle(joint_angle);
 
+  open_manipulator::Pose target_pose;
   target_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30)
   target_pose.orientation << 0.940, 0.000, -0.342,
                               0.000, 1.000, 0.000,
                               0.342, 0.000, 0.940;
 
-  kinematics.inverse(link, END, target_pose);
+  kinematics->inverse(link, GRIPPER, target_pose);
 
 #ifdef DEBUG
-  for (uint8_t num = BASE; num <= END; num++)
+  for (uint8_t num = BASE; num <= GRIPPER; num++)
   {
     Serial.println(link[num].q_*RAD2DEG);
   }
 #endif
+
+  establishContactToProcessing();
 }
 
 void loop()
 {
+#ifdef SIMULATION
   communicationWithProcessing();
+#endif
+
+#ifdef DYNAMIXEL
+  motor->jointControl(getJointAngle());
+  motor->gripControl(&grip_on);
+#endif
+
   showLedStatus();
 }
 
@@ -136,7 +149,7 @@ void initLink()
   link[4].v_       = Eigen::Vector3f::Zero();
   link[4].w_       = Eigen::Vector3f::Zero();
 
-  link[5].name_    = "End";
+  link[5].name_    = "GRIPPER";
   link[5].mother_  = 4;
   link[5].sibling_ = -1;
   link[5].child_   = -1;
@@ -152,20 +165,34 @@ void initLink()
   link[5].w_       = Eigen::Vector3f::Zero();
 }
 
+void initKinematics()
+{
+  kinematics = new open_manipulator::Kinematics(LINK_NUM);
+}
+
+void initMotorDriver()
+{
+  motor = new open_manipulator::MotorDriver(JOINT_NUM+GRIP_NUM, PROTOCOL_VERSION, BAUE_RATE);
+  if (motor->init())
+    motor->setTorque(TRUE);
+  else
+    return;
+}
+
 /*******************************************************************************
 * Set joint angle
 *******************************************************************************/
-void setJointAngle(float joint_angle[6])
+void setJointAngle(float joint_angle[LINK_NUM])
 {
   link[JOINT1].q_ = joint_angle[JOINT1];
   link[JOINT2].q_ = joint_angle[JOINT2];
   link[JOINT3].q_ = joint_angle[JOINT3];
   link[JOINT4].q_ = joint_angle[JOINT4];
 
-  kinematics.forward(link, BASE);
+  kinematics->forward(link, BASE);
 
 #ifdef DEBUG
-  for (uint8_t num = BASE; num <= END; num++)
+  for (uint8_t num = BASE; num <= GRIPPER; num++)
   {
     Serial.print("link : "); Serial.println(link[num].name_);
     Serial.println("p_ : "); print_vt3f(link[num].p_);
@@ -174,12 +201,23 @@ void setJointAngle(float joint_angle[6])
 #endif
 }
 
+uint32_t* getJointAngle()
+{
+  uint32_t joint_angle[JOINT_NUM];
+
+  joint_angle[JOINT1] = link[JOINT1].q_;
+  joint_angle[JOINT2] = link[JOINT2].q_;
+  joint_angle[JOINT3] = link[JOINT3].q_;
+  joint_angle[JOINT4] = link[JOINT4].q_;
+
+  return joint_angle;
+}
+
 /*******************************************************************************
 * HardwareTimer function
 *******************************************************************************/
 void communicationWithProcessing()
 {
-#ifdef SIMULATION
   static String simulator = "";
   static bool communication = false;
 
@@ -208,13 +246,12 @@ void communicationWithProcessing()
     Serial.print(",");
     Serial.println(gripper_pos);
   }
-#endif
 }
 
 /*******************************************************************************
 * send an initial string
 *******************************************************************************/
-void establishContact()
+void establishContactToProcessing()
 {
   if (Serial.available())
   {
