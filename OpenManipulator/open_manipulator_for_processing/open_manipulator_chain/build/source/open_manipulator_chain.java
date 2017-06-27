@@ -1,3 +1,21 @@
+import processing.core.*; 
+import processing.data.*; 
+import processing.event.*; 
+import processing.opengl.*; 
+
+import processing.serial.*; 
+
+import java.util.HashMap; 
+import java.util.ArrayList; 
+import java.io.File; 
+import java.io.BufferedReader; 
+import java.io.PrintWriter; 
+import java.io.InputStream; 
+import java.io.OutputStream; 
+import java.io.IOException; 
+
+public class open_manipulator_chain extends PApplet {
+
 /**
  * simulation.
  *
@@ -5,7 +23,7 @@
  * to show how to change pose of objects.
 */
 
-import processing.serial.*;
+
 
 // Shape variable
 PShape link1, link2, link3, link4, link5, gripper, gripper_sub;
@@ -24,18 +42,20 @@ float[] gripper_angle = new float[2];
 static int tTime;
 int update_period = 300;
 
-void setup()
+public void setup()
 {
-  size(600, 600, OPENGL);
-  smooth();
+  
+  
 
   initShape();
   initView();
 
+  // frame.setResizable(true);
+
   //connectOpenCR(0);
 }
 
-void draw()
+public void draw()
 {
   lights();
   smooth();
@@ -56,41 +76,41 @@ void draw()
   }
 }
 
-void mouseDragged()
+public void mouseDragged()
 {
-  model_rot_z -= (mouseX - pmouseX) * 0.01;
-  model_rot_x -= (mouseY - pmouseY) * 0.01;
+  model_rot_z -= (mouseX - pmouseX) * 0.01f;
+  model_rot_x -= (mouseY - pmouseY) * 0.01f;
 }
 
-void keyPressed()
+public void keyPressed()
 {
   if      (key == 'a') model_trans_x -= 50;
   else if (key == 'd') model_trans_x += 50;
   else if (key == 's') model_trans_y += 50;
   else if (key == 'w') model_trans_y -= 50;
-  else if (key == 'r') model_scale_factor += 0.5;
-  else if (key == 'f') model_scale_factor -= 0.5;
+  else if (key == 'r') model_scale_factor += 0.5f;
+  else if (key == 'f') model_scale_factor -= 0.5f;
   else if (key == 'i') model_trans_x = model_trans_y = model_scale_factor = model_rot_z = model_rot_x = 0;
 }
 
-void initView()
+public void initView()
 {
-  float camera_y = height/2.0;
-  float fov = 200/float(width) * PI/2;
-  float camera_z = camera_y / tan(fov / 2.0);
-  float aspect = float(width)/float(height);
+  float camera_y = height/2.0f;
+  float fov = 200/PApplet.parseFloat(width) * PI/2;
+  float camera_z = camera_y / tan(fov / 2.0f);
+  float aspect = PApplet.parseFloat(width)/PApplet.parseFloat(height);
 
-  perspective(fov, aspect, camera_z/10.0, camera_z*10.0);
+  perspective(fov, aspect, camera_z/10.0f, camera_z*10.0f);
 
   // Eye position
   // Scene center
   // Upwards axis
-  camera(width/2.0, height/2.0-500, height/2.0 * 4,
+  camera(width/2.0f, height/2.0f-500, height/2.0f * 4,
          width/2-100, height/2, 0,
          0, 1, 0);
 }
 
-void initShape()
+public void initShape()
 {
   link1       = loadShape("meshes/chain/link1.obj");
   link2       = loadShape("meshes/chain/link2.obj");
@@ -104,7 +124,7 @@ void initShape()
   gripperOff();
 }
 
-void connectOpenCR(int port_num)
+public void connectOpenCR(int port_num)
 {
   printArray(Serial.list());
 
@@ -115,12 +135,12 @@ void connectOpenCR(int port_num)
   opencr_port.write("ready");
 }
 
-void serialEvent(Serial opencr_port)
+public void serialEvent(Serial opencr_port)
 {
   String opencr_string = opencr_port.readStringUntil('\n');
   opencr_string = trim(opencr_string);
 
-  float[] angles = float(split(opencr_string, ','));
+  float[] angles = PApplet.parseFloat(split(opencr_string, ','));
 
   for (int joint_num = 0; joint_num < angles.length; joint_num++)
   {
@@ -138,7 +158,7 @@ void serialEvent(Serial opencr_port)
   }
 }
 
-void drawTitle()
+public void drawTitle()
 {
   pushMatrix();
   rotateX(radians(0));
@@ -153,7 +173,7 @@ void drawTitle()
   popMatrix();
 }
 
-void drawManipulator()
+public void drawManipulator()
 {
   scale(1 + model_scale_factor);
 
@@ -196,7 +216,7 @@ void drawManipulator()
   popMatrix();
 }
 
-void drawWorldFrame()
+public void drawWorldFrame()
 {
   strokeWeight(10);
   stroke(255, 0, 0, 100);
@@ -211,7 +231,7 @@ void drawWorldFrame()
   line(0, 0, 0, 0, 0, 200);
 }
 
-void drawLocalFrame()
+public void drawLocalFrame()
 {
   strokeWeight(10);
   stroke(255, 0, 0, 100);
@@ -226,7 +246,7 @@ void drawLocalFrame()
   line(0, 0, 0, 0, 0, 100);
 }
 
-void setJointAngle(float angle1, float angle2, float angle3, float angle4)
+public void setJointAngle(float angle1, float angle2, float angle3, float angle4)
 {
   joint_angle[0] = angle1;
   joint_angle[1] = angle2;
@@ -234,20 +254,30 @@ void setJointAngle(float angle1, float angle2, float angle3, float angle4)
   joint_angle[3] = angle4;
 }
 
-void gripperOn()
+public void gripperOn()
 {
   gripper_angle[0] = -20;
   gripper_angle[1] = -gripper_angle[0] + 20;
 }
 
-void gripperOff()
+public void gripperOff()
 {
   gripper_angle[0] = -40;
   gripper_angle[1] = -gripper_angle[0] + 44;
 }
 
-void gripperJointAngle(float angle)
+public void gripperJointAngle(float angle)
 {
   gripper_angle[0] = angle;
   gripper_angle[1] = -gripper_angle[0] - angle;
+}
+  public void settings() {  size(600, 600, OPENGL);  smooth(); }
+  static public void main(String[] passedArgs) {
+    String[] appletArgs = new String[] { "open_manipulator_chain" };
+    if (passedArgs != null) {
+      PApplet.main(concat(appletArgs, passedArgs));
+    } else {
+      PApplet.main(appletArgs);
+    }
+  }
 }

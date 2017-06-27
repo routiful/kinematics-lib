@@ -19,13 +19,13 @@
 #ifndef CALC_H_
 #define CALC_H_
 
-#include <Arduino.h>
-#include <math.h>
+#include "link.h"
 
 #include <Eigen.h>        // Calls main Eigen matrix class library
 #include <Eigen/LU>       // Calls inverse, determinant, LU decomp., etc.
+#include <Eigen/Dense>
 
-#include "link.h"
+#include <math.h>
 
 #define DEG2RAD (M_PI / 180.0)
 #define RAD2DEG (180.0 / M_PI)
