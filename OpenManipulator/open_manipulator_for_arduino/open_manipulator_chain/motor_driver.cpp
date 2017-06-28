@@ -19,9 +19,8 @@
 #include "motor_driver.h"
 using namespace open_manipulator;
 
-MotorDriver::MotorDriver(int8_t motor_num, float protocol_version, uint32_t baud_rate)
+MotorDriver::MotorDriver(float protocol_version, uint32_t baud_rate)
 {
-  motor_num_        = motor_num;
   protocol_version_ = protocol_version;
   baud_rate_        = baud_rate;
 }
@@ -60,7 +59,7 @@ bool MotorDriver::init(Motor* motor)
     return false;
   }
 
-  motor_ = motor;
+  motor_num_ = getMotor(motor);
 
   groupSyncWriteTorque_   = new dynamixel::GroupSyncWrite(portHandler_, packetHandler_, ADDR_X_TORQUE_ENABLE,    LEN_X_TORQUE_ENABLE);
   groupSyncWritePosition_ = new dynamixel::GroupSyncWrite(portHandler_, packetHandler_, ADDR_X_GOAL_POSITION,    LEN_X_GOAL_POSITION);
@@ -81,6 +80,16 @@ void MotorDriver::close(void)
 
   // Close port
   portHandler_->closePort();
+}
+
+uint8_t MotorDriver::getMotor(Motor* motor)
+{
+  uint8_t motor_num;
+
+  motor_     = motor;
+  motor_num = sizeof(motor)/sizeof(motor[0]);
+
+  return motor_num;
 }
 
 bool MotorDriver::setTorque(uint8_t onoff)

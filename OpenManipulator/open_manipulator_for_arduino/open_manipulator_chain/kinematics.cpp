@@ -53,9 +53,9 @@ void Kinematics::forward(Link* link, int8_t me)
 /*******************************************************************************
 * Inverse kinematics (Numerical Method)
 *******************************************************************************/
-void Kinematics::inverse(Link* link, uint8_t to, Pose goal_pose)
+void Kinematics::inverse(Link* link, uint8_t to, Pose goal_pose, float lambda)
 {
-  float lambda = 0.7; // To stabilize the numeric calculation (0 1]
+  //lambda :  To stabilize the numeric calculation (0 1]
   Eigen::MatrixXf J(6,5);
   Eigen::Vector3f Verr, Werr;
   Eigen::VectorXf VWerr(6);

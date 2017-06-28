@@ -37,7 +37,7 @@ class Kinematics
   ~Kinematics();
 
   void forward(Link* link, int8_t me);
-  void inverse(Link* link, uint8_t to, Pose goal_pose);
+  void inverse(Link* link, uint8_t to, Pose goal_pose, float lambda = 0.7);
 };
 }
 

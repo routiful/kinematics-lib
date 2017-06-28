@@ -87,11 +87,13 @@ class MotorDriver
   dynamixel::GroupSyncRead  *groupSyncReadCurrent_;
 
  public:
-  MotorDriver(int8_t motor_num, float protocol_version, uint32_t baud_rate);
+  MotorDriver(float protocol_version, uint32_t baud_rate);
   ~MotorDriver();
 
   bool init(Motor* motor);
   void close(void);
+
+  uint8_t getMotor(Motor* motor);
 
   bool setTorque(uint8_t onoff);
   bool jointControl(int32_t *value);

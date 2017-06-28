@@ -18,9 +18,9 @@
 
 #include "open_manipulator_chain_config.h"
 
-// #define DEBUG
-#define DYNAMIXEL
-#define SIMULATION
+#define DEBUG
+// #define DYNAMIXEL
+// #define SIMULATION
 
 void setup()
 {
@@ -61,7 +61,7 @@ void loop()
 #endif
 
 #ifdef DYNAMIXEL
-  // sendJointAngle();
+  //sendJointAngle();
   //gripOff();
   getPosition();
 #endif
@@ -248,7 +248,7 @@ void initMotor()
 
 void initMotorDriver(uint8_t torque)
 {
-  motor_driver = new open_manipulator::MotorDriver(JOINT_NUM+GRIP_NUM, PROTOCOL_VERSION, BAUE_RATE);
+  motor_driver = new open_manipulator::MotorDriver(PROTOCOL_VERSION, BAUE_RATE);
   if (motor_driver->init(motor))
     motor_driver->setTorque(torque);
   else
@@ -308,13 +308,7 @@ void communicationWithProcessing()
   {
     simulator = Serial.readString();
     if (simulator == "ready")
-    {
       communication = true;
-    }
-    else if (simulator == "stop")
-    {
-      communication = false;
-    }
   }
 
   if (communication)
