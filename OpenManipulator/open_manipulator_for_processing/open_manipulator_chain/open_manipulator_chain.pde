@@ -18,7 +18,7 @@ Serial opencr_port;
 
 // Angle variable
 float[] joint_angle = new float[4];
-float[] gripper_angle = new float[2];
+float[] gripper_pos = new float[2];
 
 // Simulation frequency
 static int tTime;
@@ -32,19 +32,12 @@ void setup()
   initShape();
   initView();
 
-  //connectOpenCR(0);
+  connectOpenCR(0);
 }
 
 void draw()
 {
-  lights();
-  smooth();
-  background(30);
-
-  translate(width/2, height/2, 0);
-
-  rotateX(radians(90));
-  rotateZ(radians(140));
+  setWindow();
 
   drawTitle();
   drawWorldFrame();
@@ -68,8 +61,8 @@ void keyPressed()
   else if (key == 'd') model_trans_x += 50;
   else if (key == 's') model_trans_y += 50;
   else if (key == 'w') model_trans_y -= 50;
-  else if (key == 'r') model_scale_factor += 0.5;
-  else if (key == 'f') model_scale_factor -= 0.5;
+  else if (key == 'q') model_scale_factor += 0.5;
+  else if (key == 'e') model_scale_factor -= 0.5;
   else if (key == 'i') model_trans_x = model_trans_y = model_scale_factor = model_rot_z = model_rot_x = 0;
 }
 
@@ -126,9 +119,9 @@ void serialEvent(Serial opencr_port)
   {
     if (joint_num == angles.length-1)
     {
-      gripper_angle[0] = angles[joint_num];
-      gripper_angle[1] = -gripper_angle[0] - gripper_angle[0];
-      print("gripper : " + angles[joint_num] + "\n");
+      int grip_num = joint_num;
+      gripperAngle2Pos(angles[grip_num]);
+      print("gripper : " + angles[grip_num] + "\n");
     }
     else
     {
@@ -136,6 +129,18 @@ void serialEvent(Serial opencr_port)
       print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "\t");
     }
   }
+}
+
+void setWindow()
+{
+  lights();
+  smooth();
+  background(30);
+
+  translate(width/2, height/2, 0);
+
+  rotateX(radians(90));
+  rotateZ(radians(140));
 }
 
 void drawTitle()
@@ -149,7 +154,7 @@ void drawTitle()
   textSize(40);
   fill(102,255,255);
   text("Press 'A','D','W','S'", -370,150,0);
-  text("And   'R','F'",         -370,225,0);
+  text("And   'Q','E'",         -370,225,0);
   popMatrix();
 }
 
@@ -185,12 +190,12 @@ void drawManipulator()
   drawLocalFrame();
 
   translate(69, 0, 0);
-  translate(0, gripper_angle[0], 0);
+  translate(0, gripper_pos[0], 0);
   shape(gripper);
   drawLocalFrame();
 
   translate(0, 0, 0);
-  translate(0, gripper_angle[1], 0);
+  translate(0, gripper_pos[1], 0);
   shape(gripper_sub);
   drawLocalFrame();
   popMatrix();
@@ -236,18 +241,19 @@ void setJointAngle(float angle1, float angle2, float angle3, float angle4)
 
 void gripperOn()
 {
-  gripper_angle[0] = -20;
-  gripper_angle[1] = -gripper_angle[0] + 20;
+  gripper_pos[0] = -25;
+  gripper_pos[1] = -gripper_pos[0] - gripper_pos[0];
 }
 
 void gripperOff()
 {
-  gripper_angle[0] = -40;
-  gripper_angle[1] = -gripper_angle[0] + 44;
+  gripper_pos[0] = -45;
+  gripper_pos[1] = -gripper_pos[0] - gripper_pos[0];
 }
 
-void gripperJointAngle(float angle)
+void gripperAngle2Pos(float angle)
 {
-  gripper_angle[0] = angle;
-  gripper_angle[1] = -gripper_angle[0] - angle;
+  float angle2pos = map(angle, 0.0, 1.57, -45.0, 0.0);
+  gripper_pos[0] = angle2pos;
+  gripper_pos[1] = -gripper_pos[0] - angle2pos;
 }

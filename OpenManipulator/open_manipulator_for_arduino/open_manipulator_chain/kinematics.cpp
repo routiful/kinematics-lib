@@ -21,7 +21,7 @@ using namespace open_manipulator;
 
 Kinematics::Kinematics(uint8_t link_num)
 {
-  calc_     = new Calc;
+  calc_     = new Calc();
   link_num_ = link_num;
 }
 

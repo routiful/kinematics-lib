@@ -38,16 +38,19 @@
 #define JOINT2  2
 #define JOINT3  3
 #define JOINT4  4
-#define GRIPPER 5
+#define END     5
 
-static float grip_on  = -10.0;
-static float grip_off = -45.0;
+#define SIM    0
+#define MOTOR  1
 
-float joint_angle[6] = {0.0, 0.0, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 0.0};
-float gripper_pos    = GRIPPER_OFF;
+static float grip_on[2]  = {-25.0, 1.3};
+static float grip_off[2] = {-45.0, 0.0};
 
+float  gripper_pos      = grip_off[SIM];
+
+open_manipulator::Motor        motor[JOINT_NUM+GRIP_NUM];
 open_manipulator::Link         link[LINK_NUM];
 open_manipulator::Kinematics*  kinematics;
-open_manipulator::MotorDriver* motor;
+open_manipulator::MotorDriver* motor_driver;
 
 #endif // OPEN_MANIPULATOR_CHAIN_CONFIG_H_

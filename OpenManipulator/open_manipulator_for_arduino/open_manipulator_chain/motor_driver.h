@@ -53,35 +53,26 @@
 
 namespace open_manipulator
 {
+
+typedef struct
+{
+  uint8_t  motor_id;
+  uint8_t  joint_id;
+  uint8_t  grip_id;
+  String   name;
+}Motor;
+
 class MotorDriver
 {
- public:
-  MotorDriver(int8_t motor_num, float protocol_version, uint32_t baud_rate);
-  ~MotorDriver();
-
-  bool init(void);
-  void close(void);
-
-  bool setTorque(uint8_t onoff);
-  bool jointControl(uint32_t *value);
-  bool gripControl (uint32_t *value);
-
-  uint32_t* readPosition();
-
-  uint32_t* convertRadian2Value(float* radian);
-  float*    convertValue2Radian(uint32_t* value);
-
  private:
+  Motor* motor_;
+
   uint8_t  motor_num_;
-  uint8_t  joint_num_;
-  uint8_t  grip_num_;
-  uint8_t  grip_id_;
 
   uint32_t baud_rate_;
   float    protocol_version_;
 
-  uint32_t present_position_value[];
-  float    present_position_radian[];
+  int32_t read_value_[];
 
   dynamixel::PortHandler   *portHandler_;
   dynamixel::PacketHandler *packetHandler_;
@@ -94,6 +85,22 @@ class MotorDriver
   dynamixel::GroupSyncRead  *groupSyncReadPosition_;
   dynamixel::GroupSyncRead  *groupSyncReadVelocity_;
   dynamixel::GroupSyncRead  *groupSyncReadCurrent_;
+
+ public:
+  MotorDriver(int8_t motor_num, float protocol_version, uint32_t baud_rate);
+  ~MotorDriver();
+
+  bool init(Motor* motor);
+  void close(void);
+
+  bool setTorque(uint8_t onoff);
+  bool jointControl(int32_t *value);
+  bool gripControl (int32_t value);
+
+  int32_t* readPosition();
+
+  int32_t convertRadian2Value(float radian);
+  float    convertValue2Radian(int32_t value);
 };
 }
 

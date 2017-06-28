@@ -18,9 +18,9 @@
 
 #include "open_manipulator_chain_config.h"
 
-#define DEBUG
+// #define DEBUG
 #define DYNAMIXEL
-// #define SIMULATION
+#define SIMULATION
 
 void setup()
 {
@@ -28,13 +28,14 @@ void setup()
 #ifdef DEBUG
    while(!Serial);
 #endif
-
   initLink();
   initKinematics();
 #ifdef DYNAMIXEL
-  initMotorDriver();
+  initMotor();
+  initMotorDriver(FALSE);
 #endif
 
+  uint32_t joint_angle[JOINT_NUM] = {0, };
   setJointAngle(joint_angle);
 
   open_manipulator::Pose target_pose;
@@ -43,126 +44,173 @@ void setup()
                               0.000, 1.000, 0.000,
                               0.342, 0.000, 0.940;
 
-  kinematics->inverse(link, GRIPPER, target_pose);
+  kinematics->inverse(link, END, target_pose);
 
-#ifdef DEBUG
-  for (uint8_t num = BASE; num <= GRIPPER; num++)
-  {
-    Serial.println(link[num].q_*RAD2DEG);
-  }
-#endif
+  float* angle = getJointAngle();
 
+#ifdef SIMULATION
   establishContactToProcessing();
+#endif
 }
 
 void loop()
 {
 #ifdef SIMULATION
   communicationWithProcessing();
+  showLedStatus();
 #endif
 
 #ifdef DYNAMIXEL
-  motor->jointControl(getJointAngle());
-  motor->gripControl(&grip_on);
+  // sendJointAngle();
+  //gripOff();
+  getPosition();
 #endif
-
-  showLedStatus();
 }
 
+void getPosition()
+{
+  int32_t* pos = motor_driver->readPosition();
+
+  for (int num = 0; num < JOINT_NUM+GRIP_NUM; num++)
+  {
+    link[num+1].q_ = motor_driver->convertValue2Radian(pos[num]);
+  }
+
+#ifndef SIMULATION
+  Serial.print(link[JOINT1].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT2].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT3].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT4].q_);
+  Serial.print(",");
+  Serial.println(link[END].q_);
+#endif
+}
+
+void sendJointAngle(float* angle)
+{
+  int32_t joint_value[JOINT_NUM] = {0, };
+
+  for (int num = 0; num < JOINT_NUM; num++)
+  {
+    joint_value[num] = motor_driver->convertRadian2Value(angle[num]);
+  }
+  motor_driver->jointControl(joint_value);
+}
+
+void gripOn()
+{
+  int32_t gripper_value;
+
+  gripper_pos = grip_on[MOTOR];
+  gripper_value = motor_driver->convertRadian2Value(gripper_pos);
+  motor_driver->gripControl(gripper_value);
+}
+
+void gripOff()
+{
+  int32_t gripper_value;
+
+  gripper_pos = grip_off[MOTOR];
+  gripper_value = motor_driver->convertRadian2Value(gripper_pos);
+  motor_driver->gripControl(gripper_value);
+}
 /*******************************************************************************
 * Manipulator link initialization
 *******************************************************************************/
 void initLink()
 {
-  link[0].name_    = "Base";
-  link[0].mother_  = -1;
-  link[0].sibling_ = -1;
-  link[0].child_   = 1;
-  link[0].mass_    = 1.0;
-  link[0].p_       = Eigen::Vector3f::Zero();
-  link[0].R_       = Eigen::Matrix3f::Identity(3,3);
-  link[0].q_       = 0;
-  link[0].dq_      = 0;
-  link[0].ddq_     = 0;
-  link[0].a_       = Eigen::Vector3f::Zero();
-  link[0].b_       = Eigen::Vector3f::Zero();
-  link[0].v_       = Eigen::Vector3f::Zero();
-  link[0].w_       = Eigen::Vector3f::Zero();
+  link[BASE].name_    = "Base";
+  link[BASE].mother_  = -1;
+  link[BASE].sibling_ = -1;
+  link[BASE].child_   = 1;
+  link[BASE].mass_    = 1.0;
+  link[BASE].p_       = Eigen::Vector3f::Zero();
+  link[BASE].R_       = Eigen::Matrix3f::Identity(3,3);
+  link[BASE].q_       = 0;
+  link[BASE].dq_      = 0;
+  link[BASE].ddq_     = 0;
+  link[BASE].a_       = Eigen::Vector3f::Zero();
+  link[BASE].b_       = Eigen::Vector3f::Zero();
+  link[BASE].v_       = Eigen::Vector3f::Zero();
+  link[BASE].w_       = Eigen::Vector3f::Zero();
 
-  link[1].name_    = "Joint1";
-  link[1].mother_  = 0;
-  link[1].sibling_ = -1;
-  link[1].child_   = 2;
-  link[1].mass_    = 1.0;
-  link[1].p_       = Eigen::Vector3f::Zero();
-  link[1].R_       = Eigen::Matrix3f::Identity(3,3);
-  link[1].q_       = 0.0;
-  link[1].dq_      = 0.0;
-  link[1].ddq_     = 0.0;
-  link[1].a_       << 0, 0, 1;
-  link[1].b_       << 0.012, 0, 0.036;
-  link[1].v_       = Eigen::Vector3f::Zero();
-  link[1].w_       = Eigen::Vector3f::Zero();
+  link[JOINT1].name_    = "Joint1";
+  link[JOINT1].mother_  = 0;
+  link[JOINT1].sibling_ = -1;
+  link[JOINT1].child_   = 2;
+  link[JOINT1].mass_    = 1.0;
+  link[JOINT1].p_       = Eigen::Vector3f::Zero();
+  link[JOINT1].R_       = Eigen::Matrix3f::Identity(3,3);
+  link[JOINT1].q_       = 0.0;
+  link[JOINT1].dq_      = 0.0;
+  link[JOINT1].ddq_     = 0.0;
+  link[JOINT1].a_       << 0, 0, 1;
+  link[JOINT1].b_       << 0.012, 0, 0.036;
+  link[JOINT1].v_       = Eigen::Vector3f::Zero();
+  link[JOINT1].w_       = Eigen::Vector3f::Zero();
 
-  link[2].name_    = "Joint2";
-  link[2].mother_  = 1;
-  link[2].sibling_ = -1;
-  link[2].child_   = 3;
-  link[2].mass_    = 1.0;
-  link[2].p_       = Eigen::Vector3f::Zero();
-  link[2].R_       = Eigen::Matrix3f::Identity(3,3);
-  link[2].q_       = 0.0;
-  link[2].dq_      = 0.0;
-  link[2].ddq_     = 0.0;
-  link[2].a_       << 0, -1, 0;
-  link[2].b_       << 0, 0, 0.040;
-  link[2].v_       = Eigen::Vector3f::Zero();
-  link[2].w_       = Eigen::Vector3f::Zero();
+  link[JOINT2].name_    = "Joint2";
+  link[JOINT2].mother_  = 1;
+  link[JOINT2].sibling_ = -1;
+  link[JOINT2].child_   = 3;
+  link[JOINT2].mass_    = 1.0;
+  link[JOINT2].p_       = Eigen::Vector3f::Zero();
+  link[JOINT2].R_       = Eigen::Matrix3f::Identity(3,3);
+  link[JOINT2].q_       = 0.0;
+  link[JOINT2].dq_      = 0.0;
+  link[JOINT2].ddq_     = 0.0;
+  link[JOINT2].a_       << 0, -1, 0;
+  link[JOINT2].b_       << 0, 0, 0.040;
+  link[JOINT2].v_       = Eigen::Vector3f::Zero();
+  link[JOINT2].w_       = Eigen::Vector3f::Zero();
 
-  link[3].name_    = "Joint3";
-  link[3].mother_  = 2;
-  link[3].sibling_ = -1;
-  link[3].child_   = 4;
-  link[3].mass_    = 1.0;
-  link[3].p_       = Eigen::Vector3f::Zero();
-  link[3].R_       = Eigen::Matrix3f::Identity(3,3);
-  link[3].q_       = 0.0;
-  link[3].dq_      = 0.0;
-  link[3].ddq_     = 0.0;
-  link[3].a_       << 0, -1, 0;
-  link[3].b_       << 0.022, 0, 0.122;
-  link[3].v_       = Eigen::Vector3f::Zero();
-  link[3].w_       = Eigen::Vector3f::Zero();
+  link[JOINT3].name_    = "Joint3";
+  link[JOINT3].mother_  = 2;
+  link[JOINT3].sibling_ = -1;
+  link[JOINT3].child_   = 4;
+  link[JOINT3].mass_    = 1.0;
+  link[JOINT3].p_       = Eigen::Vector3f::Zero();
+  link[JOINT3].R_       = Eigen::Matrix3f::Identity(3,3);
+  link[JOINT3].q_       = 0.0;
+  link[JOINT3].dq_      = 0.0;
+  link[JOINT3].ddq_     = 0.0;
+  link[JOINT3].a_       << 0, -1, 0;
+  link[JOINT3].b_       << 0.022, 0, 0.122;
+  link[JOINT3].v_       = Eigen::Vector3f::Zero();
+  link[JOINT3].w_       = Eigen::Vector3f::Zero();
 
-  link[4].name_    = "Joint4";
-  link[4].mother_  = 3;
-  link[4].sibling_ = -1;
-  link[4].child_   = 5;
-  link[4].mass_    = 1.0;
-  link[4].p_       = Eigen::Vector3f::Zero();
-  link[4].R_       = Eigen::Matrix3f::Identity(3,3);
-  link[4].q_       = 0.0;
-  link[4].dq_      = 0.0;
-  link[4].ddq_     = 0.0;
-  link[4].a_       << 0, -1, 0;
-  link[4].b_       << 0.124, 0, 0;
-  link[4].v_       = Eigen::Vector3f::Zero();
-  link[4].w_       = Eigen::Vector3f::Zero();
+  link[JOINT4].name_    = "Joint4";
+  link[JOINT4].mother_  = 3;
+  link[JOINT4].sibling_ = -1;
+  link[JOINT4].child_   = 5;
+  link[JOINT4].mass_    = 1.0;
+  link[JOINT4].p_       = Eigen::Vector3f::Zero();
+  link[JOINT4].R_       = Eigen::Matrix3f::Identity(3,3);
+  link[JOINT4].q_       = 0.0;
+  link[JOINT4].dq_      = 0.0;
+  link[JOINT4].ddq_     = 0.0;
+  link[JOINT4].a_       << 0, -1, 0;
+  link[JOINT4].b_       << 0.124, 0, 0;
+  link[JOINT4].v_       = Eigen::Vector3f::Zero();
+  link[JOINT4].w_       = Eigen::Vector3f::Zero();
 
-  link[5].name_    = "GRIPPER";
-  link[5].mother_  = 4;
-  link[5].sibling_ = -1;
-  link[5].child_   = -1;
-  link[5].mass_    = 1.0;
-  link[5].p_       = Eigen::Vector3f::Zero();
-  link[5].R_       = Eigen::Matrix3f::Identity(3,3);
-  link[5].q_       = 0.0;
-  link[5].dq_      = 0.0;
-  link[5].ddq_     = 0.0;
-  link[5].a_       = Eigen::Vector3f::Zero();
-  link[5].b_       << 0.070, 0, 0;
-  link[5].v_       = Eigen::Vector3f::Zero();
-  link[5].w_       = Eigen::Vector3f::Zero();
+  link[END].name_    = "Gripper";
+  link[END].mother_  = 4;
+  link[END].sibling_ = -1;
+  link[END].child_   = -1;
+  link[END].mass_    = 1.0;
+  link[END].p_       = Eigen::Vector3f::Zero();
+  link[END].R_       = Eigen::Matrix3f::Identity(3,3);
+  link[END].q_       = 0.0;
+  link[END].dq_      = 0.0;
+  link[END].ddq_     = 0.0;
+  link[END].a_       = Eigen::Vector3f::Zero();
+  link[END].b_       << 0.070, 0, 0;
+  link[END].v_       = Eigen::Vector3f::Zero();
+  link[END].w_       = Eigen::Vector3f::Zero();
 }
 
 void initKinematics()
@@ -170,11 +218,39 @@ void initKinematics()
   kinematics = new open_manipulator::Kinematics(LINK_NUM);
 }
 
-void initMotorDriver()
+void initMotor()
 {
-  motor = new open_manipulator::MotorDriver(JOINT_NUM+GRIP_NUM, PROTOCOL_VERSION, BAUE_RATE);
-  if (motor->init())
-    motor->setTorque(TRUE);
+  motor[0].motor_id   = 1;
+  motor[0].joint_id   = 1;
+  motor[0].grip_id    = 0;
+  motor[0].name       = "Joint1";
+
+  motor[1].motor_id   = 2;
+  motor[1].joint_id   = 2;
+  motor[1].grip_id    = 0;
+  motor[1].name       = "Joint2";
+
+  motor[2].motor_id   = 3;
+  motor[2].joint_id   = 3;
+  motor[2].grip_id    = 0;
+  motor[2].name       = "Joint3";
+
+  motor[3].motor_id   = 4;
+  motor[3].joint_id   = 4;
+  motor[3].grip_id    = 0;
+  motor[3].name       = "Joint4";
+
+  motor[4].motor_id   = 5;
+  motor[4].joint_id   = 0;
+  motor[4].grip_id    = 1;
+  motor[4].name       = "Gripper";
+}
+
+void initMotorDriver(uint8_t torque)
+{
+  motor_driver = new open_manipulator::MotorDriver(JOINT_NUM+GRIP_NUM, PROTOCOL_VERSION, BAUE_RATE);
+  if (motor_driver->init(motor))
+    motor_driver->setTorque(torque);
   else
     return;
 }
@@ -182,17 +258,17 @@ void initMotorDriver()
 /*******************************************************************************
 * Set joint angle
 *******************************************************************************/
-void setJointAngle(float joint_angle[LINK_NUM])
+void setJointAngle(uint32_t* angle)
 {
-  link[JOINT1].q_ = joint_angle[JOINT1];
-  link[JOINT2].q_ = joint_angle[JOINT2];
-  link[JOINT3].q_ = joint_angle[JOINT3];
-  link[JOINT4].q_ = joint_angle[JOINT4];
+  link[JOINT1].q_ = angle[JOINT1] * DEG2RAD;
+  link[JOINT2].q_ = angle[JOINT2] * DEG2RAD;
+  link[JOINT3].q_ = angle[JOINT3] * DEG2RAD;
+  link[JOINT4].q_ = angle[JOINT4] * DEG2RAD;
 
   kinematics->forward(link, BASE);
 
 #ifdef DEBUG
-  for (uint8_t num = BASE; num <= GRIPPER; num++)
+  for (uint8_t num = BASE; num <= END; num++)
   {
     Serial.print("link : "); Serial.println(link[num].name_);
     Serial.println("p_ : "); print_vt3f(link[num].p_);
@@ -201,16 +277,23 @@ void setJointAngle(float joint_angle[LINK_NUM])
 #endif
 }
 
-uint32_t* getJointAngle()
+float* getJointAngle()
 {
-  uint32_t joint_angle[JOINT_NUM];
+  float angle[JOINT_NUM];
 
-  joint_angle[JOINT1] = link[JOINT1].q_;
-  joint_angle[JOINT2] = link[JOINT2].q_;
-  joint_angle[JOINT3] = link[JOINT3].q_;
-  joint_angle[JOINT4] = link[JOINT4].q_;
+  angle[JOINT1] = link[JOINT1].q_;
+  angle[JOINT2] = link[JOINT2].q_;
+  angle[JOINT3] = link[JOINT3].q_;
+  angle[JOINT4] = link[JOINT4].q_;
 
-  return joint_angle;
+#ifdef DEBUG
+  for (uint8_t num = BASE; num <= END; num++)
+  {
+    Serial.println(link[num].q_*RAD2DEG);
+  }
+#endif
+
+  return angle;
 }
 
 /*******************************************************************************
@@ -244,7 +327,7 @@ void communicationWithProcessing()
     Serial.print(",");
     Serial.print(link[JOINT4].q_);
     Serial.print(",");
-    Serial.println(gripper_pos);
+    Serial.println(link[END].q_);
   }
 }
 
