@@ -19,51 +19,18 @@
 #include "trajectory.h"
 using namespace open_manipulator;
 
-Trajectory::Trajectory()
-{
-}
+Trajectory::Trajectory(){}
 
-Trajectory::~Trajectory()
-{
+Trajectory::~Trajectory(){}
 
-}
-
-uint16_t* Trajectory::trapezoidalVelocityProfile(uint16_t* pos_start, uint16_t* pos_end, float acc, float max_vel)
+void minimumJerk(Property* start, Property* end, float control_period, float mov_time)
 {
-  //TODO
-}
+  float a[6] = {0, };
 
-uint16_t* Trajectory::trapezoidalTimeProfile(uint16_t* pos_start, uint16_t* pos_end, float acc_time, float total_time)
-{
-  // float acc = 0.3;
-  // float decel = -acc;
-  // float velocity = 1.0;
-  // 
-  // float dt = 0.007;
-  // float decel_time = total_time - acc_time;
-  // float vel_time   = total_time - (2 * acc_time);
-  //
-  // uint16_t acc_count   = acc_time / dt;
-  // uint16_t vel_count   = vel_time / dt;
-  // uint16_t decel_count = decel_time / dt;
-  //
-  // uint16_t count = 0;
-  //
-  // for (int id = 0; id < 4; id++)
-  // {
-  //   if (count < acc_count)
-  //   {
-  //     position_value[id] = acc * dt * dt;
-  //   }
-  //   else if (count < acc_count + vel_count)
-  //   {
-  //     position_value[id] = velocity * dt;
-  //   }
-  //   else if (count < acc_count + vel_count + decel_count)
-  //   {
-  //     position_value[id] = decel * dt * dt;
-  //   }
-  // }
-  //
-  // return position_value;
+  a[0] = start->pos;
+  a[1] = start->vel;
+  a[2] = 2 * start->acc;
+
+  Eigen::Matrix3f
+
 }

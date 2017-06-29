@@ -30,7 +30,7 @@ MotorDriver::~MotorDriver()
   close();
 }
 
-bool MotorDriver::init(Motor* motor)
+bool MotorDriver::init(Motor* motor, uint8_t motor_num)
 {
   portHandler_   = dynamixel::PortHandler::getPortHandler(DEVICENAME);
   packetHandler_ = dynamixel::PacketHandler::getPacketHandler(protocol_version_);
@@ -59,7 +59,7 @@ bool MotorDriver::init(Motor* motor)
     return false;
   }
 
-  motor_num_ = getMotor(motor);
+  getMotor(motor, motor_num);
 
   groupSyncWriteTorque_   = new dynamixel::GroupSyncWrite(portHandler_, packetHandler_, ADDR_X_TORQUE_ENABLE,    LEN_X_TORQUE_ENABLE);
   groupSyncWritePosition_ = new dynamixel::GroupSyncWrite(portHandler_, packetHandler_, ADDR_X_GOAL_POSITION,    LEN_X_GOAL_POSITION);
@@ -82,14 +82,10 @@ void MotorDriver::close(void)
   portHandler_->closePort();
 }
 
-uint8_t MotorDriver::getMotor(Motor* motor)
+void MotorDriver::getMotor(Motor* motor, uint8_t motor_num)
 {
-  uint8_t motor_num;
-
-  motor_     = motor;
-  motor_num = sizeof(motor)/sizeof(motor[0]);
-
-  return motor_num;
+  motor_    = motor;
+  motor_num_ = motor_num;
 }
 
 bool MotorDriver::setTorque(uint8_t onoff)

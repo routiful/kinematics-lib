@@ -20,7 +20,6 @@
 #define KINEMATICS_H_
 
 #include "calc.h"
-#include "debug.h"
 
 namespace open_manipulator
 {
@@ -30,14 +29,16 @@ class Kinematics
 {
  private:
    Calc *calc_;
-   uint8_t link_num_;
 
  public:
-  Kinematics(uint8_t link_num);
+  Kinematics();
   ~Kinematics();
+
+  void setAngle(Link* link, uint8_t to, Eigen::VectorXf dq);
 
   void forward(Link* link, int8_t me);
   void inverse(Link* link, uint8_t to, Pose goal_pose, float lambda = 0.7);
+  void sr_inverse(Link* link, uint8_t to, Pose goal_pose);
 };
 }
 

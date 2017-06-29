@@ -19,10 +19,9 @@
 #include "kinematics.h"
 using namespace open_manipulator;
 
-Kinematics::Kinematics(uint8_t link_num)
+Kinematics::Kinematics()
 {
-  calc_     = new Calc();
-  link_num_ = link_num;
+  calc_ = new Calc();
 }
 
 Kinematics::~Kinematics(){}
@@ -56,20 +55,19 @@ void Kinematics::forward(Link* link, int8_t me)
 void Kinematics::inverse(Link* link, uint8_t to, Pose goal_pose, float lambda)
 {
   //lambda :  To stabilize the numeric calculation (0 1]
-  Eigen::MatrixXf J(6,5);
-  Eigen::Vector3f Verr, Werr;
+  uint8_t size = to;
+
+  Eigen::MatrixXf J(6,size);
   Eigen::VectorXf VWerr(6);
-  Eigen::VectorXf dq(5);
+  Eigen::VectorXf dq(size);
 
   forward(link, BASE);
 
   for (int i = 0; i < 10; i++)
   {
-    J = calc_->Jacobian(link, goal_pose, link_num_);
-    Verr = calc_->Verr(goal_pose.position, link[to].p_);
-    Werr = calc_->Werr(goal_pose.orientation, link[to].R_);
-    VWerr << Verr(0), Verr(1), Verr(2),
-             Werr(0), Werr(1), Werr(2);
+    J = calc_->Jacobian(link, size, goal_pose);
+
+    VWerr = calc_->VWerr(goal_pose, link[to].p_, link[to].R_);
 
     if (VWerr.norm() < 1E-6)
       return;
@@ -77,10 +75,80 @@ void Kinematics::inverse(Link* link, uint8_t to, Pose goal_pose, float lambda)
     Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(J);
     dq = lambda * dec.solve(VWerr);
 
-    for (int id = BASE+1; id <= to; id++)
-    {
-      link[id].q_ = link[id].q_ + dq(id-1);
-    }
+    setAngle(link, to, dq);
     forward(link, BASE);
+  }
+}
+
+void Kinematics::sr_inverse(Link* link, uint8_t to, Pose goal_pose)
+{
+  uint8_t size = to;
+
+  float wn_pos = 1/0.3;
+  float wn_ang = 1/(2*M_PI);
+  float Ek     = 0.0;
+  float Ek2    = 0.0;
+  float lambda = 0.0;
+
+  Eigen::MatrixXf J(6,size);
+  Eigen::MatrixXf Jh(size,size);
+  Eigen::VectorXf VWerr(6);
+  Eigen::VectorXf gerr(size);
+  Eigen::VectorXf dq(size);
+
+  Eigen::MatrixXf We(6,6);
+  We << wn_pos, 0,      0,      0,      0,      0,
+        0,      wn_pos, 0,      0,      0,      0,
+        0,      0,      wn_pos, 0,      0,      0,
+        0,      0,      0,      wn_ang, 0,      0,
+        0,      0,      0,      0,      wn_ang, 0,
+        0,      0,      0,      0,      0,      wn_ang;
+
+  Eigen::MatrixXf Wn(size, size);
+  Wn = Eigen::MatrixXf::Identity(size, size);
+
+  forward(link, BASE);
+  VWerr = calc_->VWerr(goal_pose, link[to].p_, link[to].R_);
+  Ek = VWerr.transpose() * We * VWerr;
+
+  for (int i = 0; i < 10; i++)
+  {
+    J = calc_->Jacobian(link, size, goal_pose);
+    lambda = Ek + 0.002;
+
+    Jh = (J.transpose() * We * J) + (lambda * Wn);
+    gerr = J.transpose() * We * VWerr;
+
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(Jh);
+    dq = dec.solve(gerr);
+
+    setAngle(link, to, dq);
+    forward(link, BASE);
+    VWerr = calc_->VWerr(goal_pose, link[to].p_, link[to].R_);
+
+    Ek2 = VWerr.transpose() * We * VWerr;
+
+    if (Ek2 < 1E-12)
+    {
+      break;
+    }
+    else if (Ek2 < Ek)
+    {
+      Ek = Ek2;
+    }
+    else
+    {
+      setAngle(link, to, -dq);
+      forward(link, BASE);
+      break;
+    }
+  }
+}
+
+void Kinematics::setAngle(Link* link, uint8_t to, Eigen::VectorXf dq)
+{
+  for (int id = 1; id <= to; id++)
+  {
+    link[id].q_ = link[id].q_ + dq(id-1);
   }
 }

@@ -19,22 +19,24 @@
 #ifndef TRAJECTORY_H_
 #define TRAJECTORY_H_
 
-#include <Arduino.h>
-#include <math.h>
+#include "calc.h"
 
 namespace open_manipulator
 {
+typedef struct
+{
+  float pos;
+  float vel;
+  float acc;
+} Property;
+
 class Trajectory
 {
- public:
-   uint16_t position_value[];
-
  public:
   Trajectory();
   ~Trajectory();
 
-  uint16_t* trapezoidalVelocityProfile(uint16_t* pos_start, uint16_t* pos_end, float acc, float max_vel);
-  uint16_t* trapezoidalTimeProfile(uint16_t* pos_start, uint16_t* pos_end, float acc_time, float total_time);
+  void minimumJerk();
 };
 }
 

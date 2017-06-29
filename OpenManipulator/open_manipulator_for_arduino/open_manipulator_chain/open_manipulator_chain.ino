@@ -28,8 +28,10 @@ void setup()
 #ifdef DEBUG
    while(!Serial);
 #endif
+
   initLink();
   initKinematics();
+
 #ifdef DYNAMIXEL
   initMotor();
   initMotorDriver(FALSE);
@@ -38,13 +40,13 @@ void setup()
   uint32_t joint_angle[JOINT_NUM] = {0, };
   setJointAngle(joint_angle);
 
-  open_manipulator::Pose target_pose;
-  target_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30)
-  target_pose.orientation << 0.940, 0.000, -0.342,
-                              0.000, 1.000, 0.000,
-                              0.342, 0.000, 0.940;
+  open_manipulator::Pose goal_pose;
+  goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
+  goal_pose.orientation << 0.940, 0.000, -0.342,
+                            0.000, 1.000, 0.000,
+                            0.342, 0.000, 0.940;
 
-  kinematics->inverse(link, END, target_pose);
+  kinematics->sr_inverse(link, END, goal_pose);
 
   float* angle = getJointAngle();
 
@@ -77,15 +79,15 @@ void getPosition()
   }
 
 #ifndef SIMULATION
-  Serial.print(link[JOINT1].q_);
+  Serial.print(link[JOINT1].q_,5);
   Serial.print(",");
-  Serial.print(link[JOINT2].q_);
+  Serial.print(link[JOINT2].q_,5);
   Serial.print(",");
-  Serial.print(link[JOINT3].q_);
+  Serial.print(link[JOINT3].q_,5);
   Serial.print(",");
-  Serial.print(link[JOINT4].q_);
+  Serial.print(link[JOINT4].q_,5);
   Serial.print(",");
-  Serial.println(link[END].q_);
+  Serial.println(link[END].q_,5);
 #endif
 }
 
@@ -215,7 +217,7 @@ void initLink()
 
 void initKinematics()
 {
-  kinematics = new open_manipulator::Kinematics(LINK_NUM);
+  kinematics = new open_manipulator::Kinematics();
 }
 
 void initMotor()
@@ -249,7 +251,7 @@ void initMotor()
 void initMotorDriver(uint8_t torque)
 {
   motor_driver = new open_manipulator::MotorDriver(PROTOCOL_VERSION, BAUE_RATE);
-  if (motor_driver->init(motor))
+  if (motor_driver->init(motor, 5))
     motor_driver->setTorque(torque);
   else
     return;
@@ -260,15 +262,15 @@ void initMotorDriver(uint8_t torque)
 *******************************************************************************/
 void setJointAngle(uint32_t* angle)
 {
-  link[JOINT1].q_ = angle[JOINT1] * DEG2RAD;
-  link[JOINT2].q_ = angle[JOINT2] * DEG2RAD;
-  link[JOINT3].q_ = angle[JOINT3] * DEG2RAD;
-  link[JOINT4].q_ = angle[JOINT4] * DEG2RAD;
+  for (int num = JOINT1; num < END; num++)
+  {
+    link[num].q_ = angle[num-1] * DEG2RAD;
+  }
 
   kinematics->forward(link, BASE);
 
 #ifdef DEBUG
-  for (uint8_t num = BASE; num <= END; num++)
+  for (int num = BASE; num <= END; num++)
   {
     Serial.print("link : "); Serial.println(link[num].name_);
     Serial.println("p_ : "); print_vt3f(link[num].p_);
@@ -287,7 +289,7 @@ float* getJointAngle()
   angle[JOINT4] = link[JOINT4].q_;
 
 #ifdef DEBUG
-  for (uint8_t num = BASE; num <= END; num++)
+  for (int num = BASE; num <= END; num++)
   {
     Serial.println(link[num].q_*RAD2DEG);
   }

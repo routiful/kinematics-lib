@@ -52,8 +52,9 @@ class Calc
   Eigen::Matrix3f RotationMatrix(String notation, float angle);
   Eigen::Vector3f Verr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow);
   Eigen::Vector3f Werr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow);
+  Eigen::VectorXf VWerr(Pose goal_pos, Eigen::Vector3f pos, Eigen::Matrix3f rot);
   Eigen::Vector3f AngularVelocity(Eigen::Matrix3f rotation_matrix);
-  Eigen::MatrixXf Jacobian(Link* link, Pose goal_pose, uint8_t link_num);
+  Eigen::MatrixXf Jacobian(Link* link, uint8_t size, Pose goal_pose);
 };
 }
 

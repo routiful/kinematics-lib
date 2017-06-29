@@ -90,10 +90,10 @@ class MotorDriver
   MotorDriver(float protocol_version, uint32_t baud_rate);
   ~MotorDriver();
 
-  bool init(Motor* motor);
+  bool init(Motor* motor, uint8_t motor_num);
   void close(void);
 
-  uint8_t getMotor(Motor* motor);
+  void getMotor(Motor* motor, uint8_t motor_num);
 
   bool setTorque(uint8_t onoff);
   bool jointControl(int32_t *value);

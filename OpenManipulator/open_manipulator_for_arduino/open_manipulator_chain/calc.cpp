@@ -144,33 +144,46 @@ Eigen::Vector3f Calc::AngularVelocity(Eigen::Matrix3f rotation_matrix)
 
 Eigen::Vector3f Calc::Verr(Eigen::Vector3f Cref, Eigen::Vector3f Cnow)
 {
-  Eigen::Vector3f Verr;
+  Eigen::Vector3f get_Verr;
 
-  Verr = Cref - Cnow;
+  get_Verr = Cref - Cnow;
 
-  return Verr;
+  return get_Verr;
 }
 
 Eigen::Vector3f Calc::Werr(Eigen::Matrix3f Cref, Eigen::Matrix3f Cnow)
 {
-  Eigen::Matrix3f Rerr;
-  Eigen::Vector3f Werr;
+  Eigen::Matrix3f get_Rerr;
+  Eigen::Vector3f get_Werr;
 
-  Rerr = Cnow.transpose() * Cref;
-  Werr = Cnow * AngularVelocity(Rerr);
+  get_Rerr = Cnow.transpose() * Cref;
+  get_Werr = Cnow * AngularVelocity(get_Rerr);
 
-  return Werr;
+  return get_Werr;
 }
 
-Eigen::MatrixXf Calc::Jacobian(Link* link, Pose goal_pose, uint8_t link_num)
+Eigen::VectorXf Calc::VWerr(Pose goal_pose, Eigen::Vector3f pos, Eigen::Matrix3f rot)
 {
-  Eigen::MatrixXf J(6,link_num-1);
+  Eigen::Vector3f get_Verr, get_Werr;
+  Eigen::VectorXf get_VWerr(6);
+
+  get_Verr = Verr(goal_pose.position, pos);
+  get_Werr = Werr(goal_pose.orientation, rot);
+  get_VWerr << get_Verr(0), get_Verr(1), get_Verr(2),
+               get_Werr(0), get_Werr(1), get_Werr(2);
+
+  return get_VWerr;
+}
+
+Eigen::MatrixXf Calc::Jacobian(Link* link, uint8_t size, Pose goal_pose)
+{
+  Eigen::MatrixXf J(6,size);
   Eigen::VectorXf pose_changed(6);
   Eigen::Vector3f joint_axis          = Eigen::Vector3f::Zero();
   Eigen::Vector3f position_changed    = Eigen::Vector3f::Zero();
   Eigen::Vector3f orientation_changed = Eigen::Vector3f::Zero();
 
-  for (int id = 1; id <= (link_num-1); id++)
+  for (int id = 1; id <= size; id++)
   {
     uint8_t mother = link[id].mother_;
     if (mother == -1)
