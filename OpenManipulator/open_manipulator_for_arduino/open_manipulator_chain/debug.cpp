@@ -117,3 +117,35 @@ void print_vt3f(const Eigen::Vector3f& v)
    }
    Serial.println();
 }
+
+void showJointAngle(String unit, open_manipulator::Link* link, int from, int to)
+{
+  int num = 0;
+
+  if (unit == "rad")
+  {
+    for (num = from; num <= to; num++)
+    {
+      Serial.println(link[num].q_);
+    }
+  }
+  else if (unit == "deg")
+  {
+    for (num = from; num <= to; num++)
+    {
+      Serial.println(link[num].q_*RAD2DEG);
+    }
+  }
+}
+
+void showFKResult(open_manipulator::Link* link, int from, int to)
+{
+  int num = 0;
+
+  for (num = from; num <= to; num++)
+  {
+    Serial.print("link : "); Serial.println(link[num].name_);
+    Serial.println("p_ : "); print_vt3f(link[num].p_);
+    Serial.println("R_ : "); print_mt3f(link[num].R_);
+  }
+}

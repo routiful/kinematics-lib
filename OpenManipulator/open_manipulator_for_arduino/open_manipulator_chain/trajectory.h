@@ -36,7 +36,7 @@ class Trajectory
   Trajectory();
   ~Trajectory();
 
-  void minimumJerk();
+  Eigen::VectorXf minimumJerk(Property start, Property end, float control_period, float mov_time);
 };
 }
 

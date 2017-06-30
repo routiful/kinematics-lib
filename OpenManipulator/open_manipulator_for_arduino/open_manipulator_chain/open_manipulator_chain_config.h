@@ -20,10 +20,11 @@
 #define OPEN_MANIPULATOR_CHAIN_CONFIG_H_
 
 #include "kinematics.h"
+#include "trajectory.h"
 #include "motor_driver.h"
 #include "debug.h"
 
-#define COMMUNICATION_RATE  300
+#define CONTROL_RATE        8000
 #define SERIAL_RATE         57600
 #define BAUE_RATE           1000000
 
@@ -43,14 +44,25 @@
 #define SIM    0
 #define MOTOR  1
 
-static float grip_on[2]  = {-25.0, 1.3};
-static float grip_off[2] = {-45.0, 0.0};
+static float grip_on  = 1.3;
+static float grip_off = 0.0;
 
-float  gripper_pos      = grip_off[SIM];
+static float mov_time       = 1.0;
+static float control_period = 0.008;
+
+uint8_t moving = false;
+uint8_t comm   = false;
+
+Eigen::VectorXf tra;
+
+HardwareTimer timer(TIMER_CH1);
 
 open_manipulator::Motor        motor[JOINT_NUM+GRIP_NUM];
 open_manipulator::Link         link[LINK_NUM];
 open_manipulator::Kinematics*  kinematics;
 open_manipulator::MotorDriver* motor_driver;
+open_manipulator::Property     start_prop, end_prop;
+open_manipulator::Trajectory*  trajectory;
+
 
 #endif // OPEN_MANIPULATOR_CHAIN_CONFIG_H_

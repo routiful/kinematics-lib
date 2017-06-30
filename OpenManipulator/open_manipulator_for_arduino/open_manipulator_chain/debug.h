@@ -21,10 +21,16 @@
 
 #include <Arduino.h>
 #include <Eigen.h>
+#include "link.h"
+
+#define DEG2RAD (M_PI / 180.0)
+#define RAD2DEG (180.0 / M_PI)
 
 void showLedStatus();
 void updateRxTxLed();
 void print_mt3f(const Eigen::Matrix3f& m);
 void print_vt3f(const Eigen::Vector3f& v);
+void showJointAngle(String unit, open_manipulator::Link* link, int from, int to);
+void showFKResult(open_manipulator::Link* link, int from, int to);
 
 #endif // DEBUG_H_

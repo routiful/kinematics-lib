@@ -18,58 +18,161 @@
 
 #include "open_manipulator_chain_config.h"
 
-#define DEBUG
+// #define DEBUG
 // #define DYNAMIXEL
-// #define SIMULATION
+#define SIMULATION
 
+/*******************************************************************************
+* Setup
+*******************************************************************************/
 void setup()
 {
   Serial.begin(SERIAL_RATE);
-#ifdef DEBUG
+#ifdef SIMULATION
    while(!Serial);
 #endif
 
+  initTimer();
+
   initLink();
   initKinematics();
+
+  initTrajectory();
 
 #ifdef DYNAMIXEL
   initMotor();
   initMotorDriver(FALSE);
 #endif
 
-  uint32_t joint_angle[JOINT_NUM] = {0, };
-  setJointAngle(joint_angle);
+  kinematics->forward(link, BASE);
 
-  open_manipulator::Pose goal_pose;
-  goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
-  goal_pose.orientation << 0.940, 0.000, -0.342,
-                            0.000, 1.000, 0.000,
-                            0.342, 0.000, 0.940;
+  start_prop.pos = 0.0;
+  start_prop.vel = 0.0;
+  start_prop.acc = 0.0;
 
-  kinematics->sr_inverse(link, END, goal_pose);
+  end_prop.pos   = 30.0 * DEG2RAD;
+  end_prop.vel   = 0.0;
+  end_prop.acc   = 0.0;
 
-  float* angle = getJointAngle();
+  tra = trajectory->minimumJerk(start_prop, end_prop, control_period, mov_time);
+
+  moving = true;
+
+  // open_manipulator::Pose goal_pose;
+  // goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
+  // goal_pose.orientation << 0.940, 0.000, -0.342,
+  //                           0.000, 1.000, 0.000,
+  //                           0.342, 0.000, 0.940;
+  //
+  // kinematics->sr_inverse(link, END, goal_pose);
 
 #ifdef SIMULATION
   establishContactToProcessing();
 #endif
 }
 
+/*******************************************************************************
+* Loop
+*******************************************************************************/
 void loop()
 {
 #ifdef SIMULATION
-  communicationWithProcessing();
-  showLedStatus();
+  if (getDataFromProcessing())
+  {
+    Serial.println("fuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuk");
+    timer.start();
+  }
 #endif
 
 #ifdef DYNAMIXEL
-  //sendJointAngle();
-  //gripOff();
-  getPosition();
+  getDynamixelPosition();
+#endif
+
+  showLedStatus();
+}
+
+/*******************************************************************************
+* Timer (8mm)
+*******************************************************************************/
+void handler_control()
+{
+  // comm = getDataFromProcessing();
+
+#ifdef SIMULATION
+  if (moving)
+  {
+    for (int num = 0; num < mov_time/control_period + 1; num++)
+    {
+      link[JOINT2].q_ = tra(num);
+      // Serial.println(link[JOINT2].q_);
+      sendJointDatatoProcessing(comm);
+    }
+    moving = FALSE;
+  }
+#endif
+
+#ifdef DYNAMIXEL
+  // writeDynamixelPosition();
 #endif
 }
 
-void getPosition()
+/*******************************************************************************
+* Send Joint Data to Processing
+*******************************************************************************/
+void sendJointDatatoProcessing(uint8_t onoff)
+{
+  if (onoff)
+  {
+    Serial.print(link[JOINT1].q_);
+    Serial.print(",");
+    Serial.print(link[JOINT2].q_);
+    Serial.print(",");
+    Serial.print(link[JOINT3].q_);
+    Serial.print(",");
+    Serial.print(link[JOINT4].q_);
+    Serial.print(",");
+    Serial.println(link[END].q_);
+  }
+}
+
+/*******************************************************************************
+* Get Data From Processing
+*******************************************************************************/
+uint8_t getDataFromProcessing()
+{
+  String simulator = "";
+  uint8_t communication = false;
+
+  if (Serial.available())
+  {
+    simulator = Serial.readString();
+    Serial.println(simulator);
+    if (simulator == "ready")
+      communication = true;
+    else if (simulator == "end")
+      communication = false;
+  }
+
+  Serial.println("fuck");
+
+  return communication;
+}
+
+/*******************************************************************************
+* Initialization Timer
+*******************************************************************************/
+void initTimer()
+{
+  timer.stop();
+  timer.setPeriod(CONTROL_RATE);
+  timer.attachInterrupt(handler_control);
+  // timer.start();
+}
+
+/*******************************************************************************
+* Get Dynamixel Position (rad)
+*******************************************************************************/
+void getDynamixelPosition()
 {
   int32_t* pos = motor_driver->readPosition();
 
@@ -77,23 +180,32 @@ void getPosition()
   {
     link[num+1].q_ = motor_driver->convertValue2Radian(pos[num]);
   }
-
-#ifndef SIMULATION
-  Serial.print(link[JOINT1].q_,5);
-  Serial.print(",");
-  Serial.print(link[JOINT2].q_,5);
-  Serial.print(",");
-  Serial.print(link[JOINT3].q_,5);
-  Serial.print(",");
-  Serial.print(link[JOINT4].q_,5);
-  Serial.print(",");
-  Serial.println(link[END].q_,5);
-#endif
 }
 
-void sendJointAngle(float* angle)
+/*******************************************************************************
+* Get Link Position (rad)
+*******************************************************************************/
+float* getLinkAngle()
+{
+  float angle[JOINT_NUM+GRIP_NUM];
+
+  angle[JOINT1] = link[JOINT1].q_;
+  angle[JOINT2] = link[JOINT2].q_;
+  angle[JOINT3] = link[JOINT3].q_;
+  angle[JOINT4] = link[JOINT4].q_;
+  angle[END]    = link[END].q_;
+
+  return angle;
+}
+
+/*******************************************************************************
+* Write Dynamixel Position (rad)
+*******************************************************************************/
+void writeDynamixelPosition(float* angle)
 {
   int32_t joint_value[JOINT_NUM] = {0, };
+
+  setFK(angle);
 
   for (int num = 0; num < JOINT_NUM; num++)
   {
@@ -102,42 +214,55 @@ void sendJointAngle(float* angle)
   motor_driver->jointControl(joint_value);
 }
 
-void gripOn()
+/*******************************************************************************
+* Set joint angle
+*******************************************************************************/
+void setFK(float* angle)
 {
-  int32_t gripper_value;
+  for (int num = JOINT1; num < END; num++)
+  {
+    link[num].q_ = angle[num-1];
+  }
 
-  gripper_pos = grip_on[MOTOR];
+  kinematics->forward(link, BASE);
+}
+
+/*******************************************************************************
+* Set Gripper status
+*******************************************************************************/
+void setGripper(bool onoff)
+{
+  float   gripper_pos   = grip_off;
+  int32_t gripper_value = 0;
+
+  if (onoff)
+    gripper_pos = grip_on;
+  else
+    gripper_pos = grip_off;
+
   gripper_value = motor_driver->convertRadian2Value(gripper_pos);
   motor_driver->gripControl(gripper_value);
 }
 
-void gripOff()
-{
-  int32_t gripper_value;
-
-  gripper_pos = grip_off[MOTOR];
-  gripper_value = motor_driver->convertRadian2Value(gripper_pos);
-  motor_driver->gripControl(gripper_value);
-}
 /*******************************************************************************
 * Manipulator link initialization
 *******************************************************************************/
 void initLink()
 {
-  link[BASE].name_    = "Base";
-  link[BASE].mother_  = -1;
-  link[BASE].sibling_ = -1;
-  link[BASE].child_   = 1;
-  link[BASE].mass_    = 1.0;
-  link[BASE].p_       = Eigen::Vector3f::Zero();
-  link[BASE].R_       = Eigen::Matrix3f::Identity(3,3);
-  link[BASE].q_       = 0;
-  link[BASE].dq_      = 0;
-  link[BASE].ddq_     = 0;
-  link[BASE].a_       = Eigen::Vector3f::Zero();
-  link[BASE].b_       = Eigen::Vector3f::Zero();
-  link[BASE].v_       = Eigen::Vector3f::Zero();
-  link[BASE].w_       = Eigen::Vector3f::Zero();
+  link[BASE].name_      = "Base";
+  link[BASE].mother_    = -1;
+  link[BASE].sibling_   = -1;
+  link[BASE].child_     = 1;
+  link[BASE].mass_      = 1.0;
+  link[BASE].p_         = Eigen::Vector3f::Zero();
+  link[BASE].R_         = Eigen::Matrix3f::Identity(3,3);
+  link[BASE].q_         = 0.0;
+  link[BASE].dq_        = 0.0;
+  link[BASE].ddq_       = 0.0;
+  link[BASE].a_         = Eigen::Vector3f::Zero();
+  link[BASE].b_         = Eigen::Vector3f::Zero();
+  link[BASE].v_         = Eigen::Vector3f::Zero();
+  link[BASE].w_         = Eigen::Vector3f::Zero();
 
   link[JOINT1].name_    = "Joint1";
   link[JOINT1].mother_  = 0;
@@ -199,27 +324,41 @@ void initLink()
   link[JOINT4].v_       = Eigen::Vector3f::Zero();
   link[JOINT4].w_       = Eigen::Vector3f::Zero();
 
-  link[END].name_    = "Gripper";
-  link[END].mother_  = 4;
-  link[END].sibling_ = -1;
-  link[END].child_   = -1;
-  link[END].mass_    = 1.0;
-  link[END].p_       = Eigen::Vector3f::Zero();
-  link[END].R_       = Eigen::Matrix3f::Identity(3,3);
-  link[END].q_       = 0.0;
-  link[END].dq_      = 0.0;
-  link[END].ddq_     = 0.0;
-  link[END].a_       = Eigen::Vector3f::Zero();
-  link[END].b_       << 0.070, 0, 0;
-  link[END].v_       = Eigen::Vector3f::Zero();
-  link[END].w_       = Eigen::Vector3f::Zero();
+  link[END].name_       = "Gripper";
+  link[END].mother_     = 4;
+  link[END].sibling_    = -1;
+  link[END].child_      = -1;
+  link[END].mass_       = 1.0;
+  link[END].p_          = Eigen::Vector3f::Zero();
+  link[END].R_          = Eigen::Matrix3f::Identity(3,3);
+  link[END].q_          = 0.0;
+  link[END].dq_         = 0.0;
+  link[END].ddq_        = 0.0;
+  link[END].a_          = Eigen::Vector3f::Zero();
+  link[END].b_          << 0.070, 0, 0;
+  link[END].v_          = Eigen::Vector3f::Zero();
+  link[END].w_          = Eigen::Vector3f::Zero();
 }
 
+/*******************************************************************************
+* Initialization Kinematics Library
+*******************************************************************************/
 void initKinematics()
 {
   kinematics = new open_manipulator::Kinematics();
 }
 
+/*******************************************************************************
+* Initialization Trajectory Library
+*******************************************************************************/
+void initTrajectory()
+{
+  trajectory = new open_manipulator::Trajectory();
+}
+
+/*******************************************************************************
+* Dynamixel Initialization
+*******************************************************************************/
 void initMotor()
 {
   motor[0].motor_id   = 1;
@@ -248,6 +387,9 @@ void initMotor()
   motor[4].name       = "Gripper";
 }
 
+/*******************************************************************************
+* Initialization Motor Driver Library
+*******************************************************************************/
 void initMotorDriver(uint8_t torque)
 {
   motor_driver = new open_manipulator::MotorDriver(PROTOCOL_VERSION, BAUE_RATE);
@@ -255,76 +397,6 @@ void initMotorDriver(uint8_t torque)
     motor_driver->setTorque(torque);
   else
     return;
-}
-
-/*******************************************************************************
-* Set joint angle
-*******************************************************************************/
-void setJointAngle(uint32_t* angle)
-{
-  for (int num = JOINT1; num < END; num++)
-  {
-    link[num].q_ = angle[num-1] * DEG2RAD;
-  }
-
-  kinematics->forward(link, BASE);
-
-#ifdef DEBUG
-  for (int num = BASE; num <= END; num++)
-  {
-    Serial.print("link : "); Serial.println(link[num].name_);
-    Serial.println("p_ : "); print_vt3f(link[num].p_);
-    Serial.println("R_ : "); print_mt3f(link[num].R_);
-  }
-#endif
-}
-
-float* getJointAngle()
-{
-  float angle[JOINT_NUM];
-
-  angle[JOINT1] = link[JOINT1].q_;
-  angle[JOINT2] = link[JOINT2].q_;
-  angle[JOINT3] = link[JOINT3].q_;
-  angle[JOINT4] = link[JOINT4].q_;
-
-#ifdef DEBUG
-  for (int num = BASE; num <= END; num++)
-  {
-    Serial.println(link[num].q_*RAD2DEG);
-  }
-#endif
-
-  return angle;
-}
-
-/*******************************************************************************
-* HardwareTimer function
-*******************************************************************************/
-void communicationWithProcessing()
-{
-  static String simulator = "";
-  static bool communication = false;
-
-  if (Serial.available())
-  {
-    simulator = Serial.readString();
-    if (simulator == "ready")
-      communication = true;
-  }
-
-  if (communication)
-  {
-    Serial.print(link[JOINT1].q_);
-    Serial.print(",");
-    Serial.print(link[JOINT2].q_);
-    Serial.print(",");
-    Serial.print(link[JOINT3].q_);
-    Serial.print(",");
-    Serial.print(link[JOINT4].q_);
-    Serial.print(",");
-    Serial.println(link[END].q_);
-  }
 }
 
 /*******************************************************************************
