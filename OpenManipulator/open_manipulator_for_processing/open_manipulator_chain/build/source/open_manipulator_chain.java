@@ -23,6 +23,10 @@ public class open_manipulator_chain extends PApplet {
  * to show how to change pose of objects.
 */
 
+// Multiple Window
+// ChildApplet child;
+
+// Init serial
 
 
 // Shape variable
@@ -40,17 +44,20 @@ float[] gripper_pos = new float[2];
 
 // Simulation frequency
 static int tTime;
-int update_period = 300;
+int update_period = 8000;
 
 public void setup()
 {
+  surface.setTitle("OpenManipulator Chain");
   
   
 
   initShape();
   initView();
 
-  connectOpenCR(0);
+  // connectOpenCR(0);
+
+  // child = new ChildApplet();
 }
 
 public void draw()
@@ -82,6 +89,7 @@ public void keyPressed()
   else if (key == 'q') model_scale_factor += 0.5f;
   else if (key == 'e') model_scale_factor -= 0.5f;
   else if (key == 'i') model_trans_x = model_trans_y = model_scale_factor = model_rot_z = model_rot_x = 0;
+  else if (key == 'm') opencr_port.write("ready");
 }
 
 public void initView()
@@ -122,8 +130,6 @@ public void connectOpenCR(int port_num)
   String port_name = Serial.list()[port_num];
   opencr_port = new Serial(this, port_name, 57600);
   opencr_port.bufferUntil('\n');
-
-  opencr_port.write("ready");
 }
 
 public void serialEvent(Serial opencr_port)
@@ -275,6 +281,44 @@ public void gripperAngle2Pos(float angle)
   gripper_pos[0] = angle2pos;
   gripper_pos[1] = -gripper_pos[0] - angle2pos;
 }
+
+// class ChildApplet extends PApplet {
+//   //JFrame frame;
+//
+//   public ChildApplet() {
+//     super();
+//     PApplet.runSketch(new String[]{this.getClass().getName()}, this);
+//   }
+//
+//   public void settings() {
+//     size(400, 400, P2D);
+//     smooth();
+//   }
+//   public void setup() {
+//     surface.setTitle("Child sketch");
+//   }
+//
+//   // public void draw() {
+//   //   background(0);
+//   //   if (mousePressed) {
+//   //     fill(240, 0, 0);
+//   //     ellipse(mouseX, mouseY, 20, 20);
+//   //     fill(255);
+//   //     text("Mouse pressed on child.", 10, 30);
+//   //   } else {
+//   //     fill(255);
+//   //     ellipse(width/2, height/2, 20, 20);
+//   //   }
+//   //
+//   //   box(100, 200, 100);
+//   // }
+//   //
+//   // public void mousePressed() {
+//   // }
+//   //
+//   // public void mouseDragged() {
+//   // }
+// }
   public void settings() {  size(600, 600, OPENGL);  smooth(); }
   static public void main(String[] passedArgs) {
     String[] appletArgs = new String[] { "open_manipulator_chain" };
