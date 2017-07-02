@@ -26,7 +26,7 @@ Trajectory::~Trajectory(){}
 Eigen::VectorXf Trajectory::minimumJerk(Property start, Property end, float control_period, float mov_time)
 {
   float a[6] = {0, };
-  float step_time = mov_time/control_period + 1;
+  int step_time = mov_time/control_period + 1;
 
   a[0] =     start.pos;
   a[1] =     start.vel;
