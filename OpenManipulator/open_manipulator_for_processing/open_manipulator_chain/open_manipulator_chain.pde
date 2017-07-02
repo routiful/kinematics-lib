@@ -32,7 +32,7 @@ float[] gripper_pos = new float[2];
 
 // Simulation frequency
 static int tTime;
-int update_period = 8000;
+int update_period = 125;
 
 void settings()
 {
@@ -48,7 +48,7 @@ void setup()
   initShape();
   initView();
 
-  connectOpenCR(0);
+  connectOpenCR(7);
 }
 
 void draw()
@@ -58,11 +58,11 @@ void draw()
   drawTitle();
   drawWorldFrame();
 
-  if ((millis()-tTime) >= (1000 / update_period))
-  {
+  // if ((millis()-tTime) >= (1000 / update_period))
+  // {
     drawManipulator();
     tTime = millis();
-  }
+  // }
 }
 
 void connectOpenCR(int port_num)
@@ -92,7 +92,7 @@ void serialEvent(Serial opencr_port)
     else
     {
       joint_angle[joint_num] = angles[joint_num];
-      print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "\t");
+      print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "  ");
     }
   }
 }
@@ -284,7 +284,7 @@ class ChildApplet extends PApplet
 
   public void settings()
   {
-    size(400, 400);
+    size(400, 600);
     smooth();
   }
   public void setup()
@@ -297,14 +297,41 @@ class ChildApplet extends PApplet
        .setValue(0)
        .setColorBackground(color(0, 125, 0))
        .setPosition(0,0)
-       .setSize(200,100)
+       .setFont(createFont("arial",15))
+       .setSize(400,50)
        ;
 
-    cp5.addButton("Disconnect_OpenCR")
-      .setValue(0)
-      .setPosition(200,0)
-      .setSize(200,100)
-      ;
+    cp5.addTextfield("Joint1")
+     .setPosition(0,50)
+     .setSize(180,40)
+     .setFont(createFont("arial",13))
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
+
+    cp5.addTextfield("Joint2")
+     .setPosition(220,50)
+     .setSize(180,40)
+     .setFont(createFont("arial",13))
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
+
+    cp5.addTextfield("Joint3")
+     .setPosition(0,120)
+     .setSize(180,40)
+     .setFont(createFont("arial",13))
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
+
+    cp5.addTextfield("Joint4")
+     .setPosition(220,120)
+     .setSize(180,40)
+     .setFont(createFont("arial",13))
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
   }
 
   public void draw()
@@ -315,12 +342,5 @@ class ChildApplet extends PApplet
   public void Connect_OpenCR(int theValue)
   {
     opencr_port.write("ready");
-    println("ready");
-  }
-
-  public void Disconnect_OpenCR(int theValue)
-  {
-    opencr_port.write("end");
-    println("end");
   }
 }
