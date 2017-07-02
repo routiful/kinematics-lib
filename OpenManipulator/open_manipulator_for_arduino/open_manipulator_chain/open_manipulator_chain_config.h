@@ -41,17 +41,14 @@
 #define JOINT4  4
 #define END     5
 
-#define SIM    0
-#define MOTOR  1
-
 static float grip_on  = 1.3;
 static float grip_off = 0.0;
 
-static float mov_time       = 1.0;
+static float mov_time       = 3.0;
 static float control_period = 0.008;
 
-uint8_t moving = false;
-uint8_t comm   = false;
+bool moving = false;
+bool comm   = false;
 
 Eigen::VectorXf tra;
 
