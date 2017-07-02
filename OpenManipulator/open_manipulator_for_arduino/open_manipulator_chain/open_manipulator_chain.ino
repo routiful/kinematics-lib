@@ -18,9 +18,9 @@
 
 #include "open_manipulator_chain_config.h"
 
-// #define DEBUG
+#define DEBUG
 // #define DYNAMIXEL
-#define SIMULATION
+// #define SIMULATION
 
 /*******************************************************************************
 * Setup
@@ -28,7 +28,7 @@
 void setup()
 {
   Serial.begin(SERIAL_RATE);
-#ifdef SIMULATION
+#ifdef DEBUG
    while(!Serial);
 #endif
 
@@ -66,7 +66,7 @@ void setup()
   //
   // kinematics->sr_inverse(link, END, goal_pose);
 
-#ifdef SIMULATION
+#ifdef DEBUG
   establishContactToProcessing();
 #endif
 }
@@ -76,12 +76,12 @@ void setup()
 *******************************************************************************/
 void loop()
 {
-#ifdef SIMULATION
-  if (getDataFromProcessing())
-  {
-    Serial.println("fuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuk");
-    timer.start();
-  }
+#ifdef DEBUG
+  comm = getDataFromProcessing();
+  if (comm)
+    setTimer(true);
+  else
+    setTimer(false);
 #endif
 
 #ifdef DYNAMIXEL
@@ -96,15 +96,13 @@ void loop()
 *******************************************************************************/
 void handler_control()
 {
-  // comm = getDataFromProcessing();
-
-#ifdef SIMULATION
+#ifdef DEBUG
   if (moving)
   {
-    for (int num = 0; num < mov_time/control_period + 1; num++)
+    int step_time = mov_time/control_period + 1;
+    for (int num = 0; num < step_time; num++)
     {
       link[JOINT2].q_ = tra(num);
-      // Serial.println(link[JOINT2].q_);
       sendJointDatatoProcessing(comm);
     }
     moving = FALSE;
@@ -123,15 +121,15 @@ void sendJointDatatoProcessing(uint8_t onoff)
 {
   if (onoff)
   {
-    Serial.print(link[JOINT1].q_);
+    Serial.print(link[JOINT1].q_,5);
     Serial.print(",");
-    Serial.print(link[JOINT2].q_);
+    Serial.print(link[JOINT2].q_,5);
     Serial.print(",");
-    Serial.print(link[JOINT3].q_);
+    Serial.print(link[JOINT3].q_,5);
     Serial.print(",");
-    Serial.print(link[JOINT4].q_);
+    Serial.print(link[JOINT4].q_,5);
     Serial.print(",");
-    Serial.println(link[END].q_);
+    Serial.println(link[END].q_,5);
   }
 }
 
@@ -140,20 +138,21 @@ void sendJointDatatoProcessing(uint8_t onoff)
 *******************************************************************************/
 uint8_t getDataFromProcessing()
 {
-  String simulator = "";
-  uint8_t communication = false;
+  static String simulator = "";
+  static uint8_t communication = false;
 
   if (Serial.available())
   {
     simulator = Serial.readString();
-    Serial.println(simulator);
     if (simulator == "ready")
+    {
       communication = true;
+    }
     else if (simulator == "end")
+    {
       communication = false;
+    }
   }
-
-  Serial.println("fuck");
 
   return communication;
 }
@@ -166,7 +165,17 @@ void initTimer()
   timer.stop();
   timer.setPeriod(CONTROL_RATE);
   timer.attachInterrupt(handler_control);
-  // timer.start();
+}
+
+/*******************************************************************************
+* Onoff Timer
+*******************************************************************************/
+void setTimer(uint8_t onoff)
+{
+  if (onoff)
+    timer.start();
+  else
+    timer.stop();
 }
 
 /*******************************************************************************
