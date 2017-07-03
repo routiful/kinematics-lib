@@ -31,7 +31,7 @@ void setup()
 #ifdef DEBUG
    while(!Serial);
 #endif
-
+uint32_t tTime = micros();
   initTimer();
 
   initLink();
@@ -46,27 +46,36 @@ void setup()
 
   kinematics->forward(link, BASE);
 
-  start_prop.pos = 0.0;
-  start_prop.vel = 0.0;
-  start_prop.acc = 0.0;
+  start_prop[0].pos = 0.0;
+  end_prop[0].pos   = 0.0 * DEG2RAD;
 
-  end_prop.pos   = 30.0 * DEG2RAD;
-  end_prop.vel   = 0.0;
-  end_prop.acc   = 0.0;
+  start_prop[1].pos = 0.0;
+  end_prop[1].pos   = 60.0 * DEG2RAD;
 
-  tra = trajectory->minimumJerk(start_prop, end_prop, control_period, mov_time);
+  start_prop[2].pos = 0.0;
+  end_prop[2].pos   = -20.0 * DEG2RAD;
 
-  moving = true;
+  start_prop[3].pos = 0.0;
+  end_prop[3].pos   = -40.0 * DEG2RAD;
 
-  // open_manipulator::Pose goal_pose;
-  // goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
-  // goal_pose.orientation << 0.940, 0.000, -0.342,
-  //                           0.000, 1.000, 0.000,
-  //                           0.342, 0.000, 0.940;
-  //
-  // kinematics->sr_inverse(link, END, goal_pose);
 
-#ifdef DEBUG
+  tra = trajectory->minimumJerk(start_prop, end_prop, 1, control_period, mov_time);
+  Serial.println(micros() - tTime);
+  //moving = true;
+
+  // setTimer(true);
+
+//   open_manipulator::Pose goal_pose;
+//   goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
+//   goal_pose.orientation << 0.940, 0.000, -0.342,
+//                             0.000, 1.000, 0.000,
+//                             0.342, 0.000, 0.940;
+
+//   kinematics->sr_inverse(link, END, goal_pose);
+
+  Serial.println("end");
+
+#ifdef SIMULATION
   establishContactToProcessing();
 #endif
 }
@@ -76,19 +85,15 @@ void setup()
 *******************************************************************************/
 void loop()
 {
-#ifdef DEBUG
-  comm = getDataFromProcessing();
-  if (comm)
-    setTimer(true);
-  else
-    setTimer(false);
-#endif
-
-#ifdef DYNAMIXEL
-  getDynamixelPosition();
-#endif
-
-  showLedStatus();
+// #ifdef DEBUG
+//   getDataFromProcessing(comm);
+// #endif
+//
+// #ifdef DYNAMIXEL
+//   getDynamixelPosition();
+// #endif
+//
+//   showLedStatus();
 }
 
 /*******************************************************************************
@@ -96,22 +101,31 @@ void loop()
 *******************************************************************************/
 void handler_control()
 {
-#ifdef DEBUG
-  if (moving)
+  if (moving && comm)
   {
-    int step_time = mov_time/control_period + 1;
-    for (int num = 0; num < step_time; num++)
+    static uint32_t step_time = 0;
+
+    if (step_time == (uint32_t)(mov_time/control_period + 1))
     {
-      link[JOINT2].q_ = tra(num);
-      sendJointDatatoProcessing(comm);
+      moving = false;
+      step_time = 0;
     }
-    moving = FALSE;
-  }
+    else
+    {
+      for (int num = 1; num <= JOINT_NUM; num++)
+      {
+        link[num].q_ = tra(num-1, step_time);
+      }
+      step_time++;
+    }
+#ifdef DEBUG
+    sendJointDatatoProcessing(comm);
 #endif
 
 #ifdef DYNAMIXEL
   // writeDynamixelPosition();
 #endif
+  }
 }
 
 /*******************************************************************************
@@ -136,25 +150,26 @@ void sendJointDatatoProcessing(uint8_t onoff)
 /*******************************************************************************
 * Get Data From Processing
 *******************************************************************************/
-uint8_t getDataFromProcessing()
+void getDataFromProcessing(uint8_t &comm)
 {
-  static String simulator = "";
-  static uint8_t communication = false;
+  String simulator = "";
 
   if (Serial.available())
   {
     simulator = Serial.readString();
     if (simulator == "ready")
     {
-      communication = true;
+      comm = true;
     }
     else if (simulator == "end")
     {
-      communication = false;
+      comm = false;
+    }
+    else
+    {
+      comm = comm;
     }
   }
-
-  return communication;
 }
 
 /*******************************************************************************
@@ -165,6 +180,7 @@ void initTimer()
   timer.stop();
   timer.setPeriod(CONTROL_RATE);
   timer.attachInterrupt(handler_control);
+  timer.start();
 }
 
 /*******************************************************************************
@@ -194,17 +210,14 @@ void getDynamixelPosition()
 /*******************************************************************************
 * Get Link Position (rad)
 *******************************************************************************/
-float* getLinkAngle()
+void getLinkAngle(float* angle, uint8_t from, uint8_t to)
 {
-  float angle[JOINT_NUM+GRIP_NUM];
+  uint8_t cnt = to-from + 1;
 
-  angle[JOINT1] = link[JOINT1].q_;
-  angle[JOINT2] = link[JOINT2].q_;
-  angle[JOINT3] = link[JOINT3].q_;
-  angle[JOINT4] = link[JOINT4].q_;
-  angle[END]    = link[END].q_;
-
-  return angle;
+  for (int num = from; num <= cnt; num++)
+  {
+    angle[num] = link[num].q_;
+  }
 }
 
 /*******************************************************************************

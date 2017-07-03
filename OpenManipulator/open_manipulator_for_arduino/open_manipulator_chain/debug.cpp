@@ -108,7 +108,7 @@ void print_mt3f(const Eigen::Matrix3f& m)
 
 void print_vt3f(const Eigen::Vector3f& v)
 {
-   uint8_t i, j;
+   uint8_t i = 0;
 
    for (i=0; i<3; i++)
    {

@@ -109,7 +109,7 @@ Eigen::Vector3f Calc::AngularVelocity(Eigen::Matrix3f rotation_matrix)
        R(0,2) - R(2,0),
        R(1,0) - R(0,1);
   theta = atan2(l.norm(), R(0,0) + R(1,1) + R(2,2) - 1);
-  diag = R(0,0) + R(1,1) + R(2,2);
+  diag  = R(0,0) + R(1,1) + R(2,2);
 
   for (int i = 0; i < 3; i++)
   {
@@ -185,7 +185,7 @@ Eigen::MatrixXf Calc::Jacobian(Link* link, uint8_t size, Pose goal_pose)
 
   for (int id = 1; id <= size; id++)
   {
-    uint8_t mother = link[id].mother_;
+    int8_t mother = link[id].mother_;
     if (mother == -1)
       continue;
 

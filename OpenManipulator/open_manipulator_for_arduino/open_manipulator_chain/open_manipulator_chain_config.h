@@ -41,16 +41,16 @@
 #define JOINT4  4
 #define END     5
 
-static float grip_on  = 1.3;
-static float grip_off = 0.0;
+const float grip_on  = 1.3;
+const float grip_off = 0.0;
 
-static float mov_time       = 3.0;
-static float control_period = 0.008;
+const float mov_time       = 2.0;
+const float control_period = 0.008;
 
 bool moving = false;
-bool comm   = false;
+uint8_t comm   = false;
 
-Eigen::VectorXf tra;
+Eigen::MatrixXf tra;
 
 HardwareTimer timer(TIMER_CH1);
 
@@ -58,7 +58,8 @@ open_manipulator::Motor        motor[JOINT_NUM+GRIP_NUM];
 open_manipulator::Link         link[LINK_NUM];
 open_manipulator::Kinematics*  kinematics;
 open_manipulator::MotorDriver* motor_driver;
-open_manipulator::Property     start_prop, end_prop;
+open_manipulator::Property     start_prop[JOINT_NUM];
+open_manipulator::Property     end_prop[JOINT_NUM];
 open_manipulator::Trajectory*  trajectory;
 
 

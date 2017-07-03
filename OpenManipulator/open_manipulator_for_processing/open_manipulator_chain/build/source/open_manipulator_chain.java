@@ -3,6 +3,7 @@ import processing.data.*;
 import processing.event.*; 
 import processing.opengl.*; 
 
+import controlP5.*; 
 import processing.serial.*; 
 
 import java.util.HashMap; 
@@ -24,12 +25,18 @@ public class open_manipulator_chain extends PApplet {
 */
 
 // Multiple Window
-// ChildApplet child;
+ChildApplet child;
+
+// Control Interface
+
+
+// Control variables
+ControlP5 cp5;
 
 // Init serial
 
 
-// Shape variable
+// Shape variables
 PShape link1, link2, link3, link4, link5, gripper, gripper_sub;
 
 // Model pose
@@ -44,20 +51,23 @@ float[] gripper_pos = new float[2];
 
 // Simulation frequency
 static int tTime;
-int update_period = 8000;
+int update_period = 125;
+
+public void settings()
+{
+  size(600, 600, OPENGL);
+  smooth();
+}
 
 public void setup()
 {
   surface.setTitle("OpenManipulator Chain");
-  
-  
+  child = new ChildApplet();
 
   initShape();
   initView();
 
-  // connectOpenCR(0);
-
-  // child = new ChildApplet();
+  connectOpenCR(7);
 }
 
 public void draw()
@@ -67,29 +77,43 @@ public void draw()
   drawTitle();
   drawWorldFrame();
 
-  if ((millis()-tTime) >= (1000 / update_period))
-  {
+  // if ((millis()-tTime) >= (1000 / update_period))
+  // {
     drawManipulator();
     tTime = millis();
+  // }
+}
+
+public void connectOpenCR(int port_num)
+{
+  printArray(Serial.list());
+
+  String port_name = Serial.list()[port_num];
+  opencr_port = new Serial(this, port_name, 57600);
+  opencr_port.bufferUntil('\n');
+}
+
+public void serialEvent(Serial opencr_port)
+{
+  String opencr_string = opencr_port.readStringUntil('\n');
+  opencr_string = trim(opencr_string);
+
+  float[] angles = PApplet.parseFloat(split(opencr_string, ','));
+
+  for (int joint_num = 0; joint_num < angles.length; joint_num++)
+  {
+    if (joint_num == angles.length-1)
+    {
+      int grip_num = joint_num;
+      gripperAngle2Pos(angles[grip_num]);
+      print("gripper : " + angles[grip_num] + "\n");
+    }
+    else
+    {
+      joint_angle[joint_num] = angles[joint_num];
+      print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "  ");
+    }
   }
-}
-
-public void mouseDragged()
-{
-  model_rot_z -= (mouseX - pmouseX) * 0.01f;
-  model_rot_x -= (mouseY - pmouseY) * 0.01f;
-}
-
-public void keyPressed()
-{
-  if      (key == 'a') model_trans_x -= 50;
-  else if (key == 'd') model_trans_x += 50;
-  else if (key == 's') model_trans_y += 50;
-  else if (key == 'w') model_trans_y -= 50;
-  else if (key == 'q') model_scale_factor += 0.5f;
-  else if (key == 'e') model_scale_factor -= 0.5f;
-  else if (key == 'i') model_trans_x = model_trans_y = model_scale_factor = model_rot_z = model_rot_x = 0;
-  else if (key == 'm') opencr_port.write("ready");
 }
 
 public void initView()
@@ -123,38 +147,6 @@ public void initShape()
   gripperOff();
 }
 
-public void connectOpenCR(int port_num)
-{
-  printArray(Serial.list());
-
-  String port_name = Serial.list()[port_num];
-  opencr_port = new Serial(this, port_name, 57600);
-  opencr_port.bufferUntil('\n');
-}
-
-public void serialEvent(Serial opencr_port)
-{
-  String opencr_string = opencr_port.readStringUntil('\n');
-  opencr_string = trim(opencr_string);
-
-  float[] angles = PApplet.parseFloat(split(opencr_string, ','));
-
-  for (int joint_num = 0; joint_num < angles.length; joint_num++)
-  {
-    if (joint_num == angles.length-1)
-    {
-      int grip_num = joint_num;
-      gripperAngle2Pos(angles[grip_num]);
-      print("gripper : " + angles[grip_num] + "\n");
-    }
-    else
-    {
-      joint_angle[joint_num] = angles[joint_num];
-      print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "\t");
-    }
-  }
-}
-
 public void setWindow()
 {
   lights();
@@ -175,10 +167,10 @@ public void drawTitle()
   textSize(60);
   fill(255,204,102);
   text("OpenManipulator Chain", -450,75,0);
-  textSize(40);
+  textSize(20);
   fill(102,255,255);
-  text("Press 'A','D','W','S'", -370,150,0);
-  text("And   'Q','E'",         -370,225,0);
+  text("Press 'A','D','W','S'", -450,120,0);
+  text("And   'Q','E'",         -450,150,0);
   popMatrix();
 }
 
@@ -203,7 +195,7 @@ public void drawManipulator()
   shape(link3);
   drawLocalFrame();
 
-  translate(22, 0 , 122);
+  translate(22, 0, 122);
   rotateY(-joint_angle[2]);
   shape(link4);
   drawLocalFrame();
@@ -282,44 +274,95 @@ public void gripperAngle2Pos(float angle)
   gripper_pos[1] = -gripper_pos[0] - angle2pos;
 }
 
-// class ChildApplet extends PApplet {
-//   //JFrame frame;
-//
-//   public ChildApplet() {
-//     super();
-//     PApplet.runSketch(new String[]{this.getClass().getName()}, this);
-//   }
-//
-//   public void settings() {
-//     size(400, 400, P2D);
-//     smooth();
-//   }
-//   public void setup() {
-//     surface.setTitle("Child sketch");
-//   }
-//
-//   // public void draw() {
-//   //   background(0);
-//   //   if (mousePressed) {
-//   //     fill(240, 0, 0);
-//   //     ellipse(mouseX, mouseY, 20, 20);
-//   //     fill(255);
-//   //     text("Mouse pressed on child.", 10, 30);
-//   //   } else {
-//   //     fill(255);
-//   //     ellipse(width/2, height/2, 20, 20);
-//   //   }
-//   //
-//   //   box(100, 200, 100);
-//   // }
-//   //
-//   // public void mousePressed() {
-//   // }
-//   //
-//   // public void mouseDragged() {
-//   // }
-// }
-  public void settings() {  size(600, 600, OPENGL);  smooth(); }
+public void mouseDragged()
+{
+  model_rot_z -= (mouseX - pmouseX) * 0.01f;
+  model_rot_x -= (mouseY - pmouseY) * 0.01f;
+}
+
+public void keyPressed()
+{
+  if      (key == 'a') model_trans_x -= 50;
+  else if (key == 'd') model_trans_x += 50;
+  else if (key == 's') model_trans_y += 50;
+  else if (key == 'w') model_trans_y -= 50;
+  else if (key == 'q') model_scale_factor += 0.5f;
+  else if (key == 'e') model_scale_factor -= 0.5f;
+  else if (key == 'i') model_trans_x = model_trans_y = model_scale_factor = model_rot_z = model_rot_x = 0;
+}
+
+class ChildApplet extends PApplet
+{
+  //JFrame frame;
+
+  public ChildApplet()
+  {
+    super();
+    PApplet.runSketch(new String[]{this.getClass().getName()}, this);
+  }
+
+  public void settings()
+  {
+    size(400, 600);
+    smooth();
+  }
+  public void setup()
+  {
+    surface.setTitle("Control Interface");
+
+    cp5 = new ControlP5(this);
+
+    cp5.addButton("Connect_OpenCR")
+       .setValue(0)
+       .setColorBackground(color(0, 125, 0))
+       .setPosition(0,0)
+       .setFont(createFont("arial",15))
+       .setSize(400,50)
+       ;
+
+    cp5.addTextfield("Joint1")
+     .setPosition(0,50)
+     .setSize(180,40)
+     .setFont(createFont("arial",13))
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
+
+    cp5.addTextfield("Joint2")
+     .setPosition(220,50)
+     .setSize(180,40)
+     .setFont(createFont("arial",13))
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
+
+    cp5.addTextfield("Joint3")
+     .setPosition(0,120)
+     .setSize(180,40)
+     .setFont(createFont("arial",13))
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
+
+    cp5.addTextfield("Joint4")
+     .setPosition(220,120)
+     .setSize(180,40)
+     .setFont(createFont("arial",13))
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
+  }
+
+  public void draw()
+  {
+    background(0);
+  }
+
+  public void Connect_OpenCR(int theValue)
+  {
+    opencr_port.write("ready");
+  }
+}
   static public void main(String[] passedArgs) {
     String[] appletArgs = new String[] { "open_manipulator_chain" };
     if (passedArgs != null) {
