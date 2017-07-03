@@ -18,9 +18,9 @@
 
 #include "open_manipulator_chain_config.h"
 
-// #define DEBUG
-// #define DYNAMIXEL
-#define SIMULATION
+#define DEBUG
+#define DYNAMIXEL
+// #define SIMULATION
 
 /*******************************************************************************
 * Setup
@@ -41,54 +41,12 @@ void setup()
 
 #ifdef DYNAMIXEL
   initMotor();
-  initMotorDriver(FALSE);
+  initMotorDriver(false);
 #endif
 
   kinematics->forward(link, BASE);
 
-  start_prop[0].pos = 0.0;
-  start_prop[0].vel = 0.0;
-  start_prop[0].acc = 0.0;
-
-  end_prop[0].pos   = 30.0 * DEG2RAD;
-  end_prop[0].vel   = 0.0 * DEG2RAD;
-  end_prop[0].acc   = 0.0 * DEG2RAD;
-
-  start_prop[1].pos = 0.0;
-  start_prop[1].vel = 0.0;
-  start_prop[1].acc = 0.0;
-
-  end_prop[1].pos   = 30.0 * DEG2RAD;
-  end_prop[1].vel   = 0.0 * DEG2RAD;
-  end_prop[1].acc   = 0.0 * DEG2RAD;
-
-  start_prop[2].pos = 0.0;
-  start_prop[2].vel = 0.0;
-  start_prop[2].acc = 0.0;
-
-  end_prop[2].pos   = 30.0 * DEG2RAD;
-  end_prop[2].vel   = 0.0 * DEG2RAD;
-  end_prop[2].acc   = 0.0 * DEG2RAD;
-
-  start_prop[3].pos = 0.0;
-  start_prop[3].vel = 0.0;
-  start_prop[3].acc = 0.0;
-
-  end_prop[3].pos   = 30.0 * DEG2RAD;
-  end_prop[3].vel   = 0.0 * DEG2RAD;
-  end_prop[3].acc   = 0.0 * DEG2RAD;
-
-  joint_tra = trajectory->minimumJerk(start_prop, end_prop, 4, control_period, mov_time);
-
-  moving = true;
-
-//   open_manipulator::Pose goal_pose;
-//   goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
-//   goal_pose.orientation << 0.940, 0.000, -0.342,
-//                             0.000, 1.000, 0.000,
-//                             0.342, 0.000, 0.940;
-
-//   kinematics->sr_inverse(link, END, goal_pose);
+  Serial.println("Setup End");
 
 #ifdef SIMULATION
   establishContactToProcessing();
@@ -100,14 +58,7 @@ void setup()
 *******************************************************************************/
 void loop()
 {
-#ifdef SIMULATION
   getDataFromProcessing(comm);
-#endif
-
-#ifdef DYNAMIXEL
-  getDynamixelPosition();
-#endif
-
   showLedStatus();
 }
 
@@ -123,6 +74,8 @@ void handler_control()
 
     if (cnt == step_time)
     {
+      kinematics->forward(link, BASE);
+
       moving = false;
       cnt = 0;
     }
@@ -135,11 +88,11 @@ void handler_control()
       cnt++;
     }
 #ifdef SIMULATION
-    sendJointDataToProcessing(comm);
+    sendJointDataToProcessing();
 #endif
 
 #ifdef DYNAMIXEL
-  // writeDynamixelPosition();
+    setJointDataToDynamixel();
 #endif
   }
 }
@@ -147,20 +100,17 @@ void handler_control()
 /*******************************************************************************
 * Send Joint Data to Processing
 *******************************************************************************/
-void sendJointDataToProcessing(bool onoff)
+void sendJointDataToProcessing()
 {
-  if (onoff)
-  {
-    Serial.print(link[JOINT1].q_,5);
-    Serial.print(",");
-    Serial.print(link[JOINT2].q_,5);
-    Serial.print(",");
-    Serial.print(link[JOINT3].q_,5);
-    Serial.print(",");
-    Serial.print(link[JOINT4].q_,5);
-    Serial.print(",");
-    Serial.println(link[END].q_,5);
-  }
+  Serial.print(link[JOINT1].q_,5);
+  Serial.print(",");
+  Serial.print(link[JOINT2].q_,5);
+  Serial.print(",");
+  Serial.print(link[JOINT3].q_,5);
+  Serial.print(",");
+  Serial.print(link[JOINT4].q_,5);
+  Serial.print(",");
+  Serial.println(link[END].q_,5);
 }
 
 /*******************************************************************************
@@ -176,10 +126,63 @@ void getDataFromProcessing(bool &comm)
     if (simulator == "ready")
     {
       comm = true;
+      Serial.println(simulator);
+      motor_driver->setTorque(true);
+      getDynamixelPosition();
     }
     else if (simulator == "end")
     {
       comm = false;
+      Serial.println(simulator);
+      motor_driver->setTorque(false);
+    }
+    else if (simulator == "start")
+    {
+      Serial.println(simulator);
+
+      getDynamixelPosition();
+
+      start_prop[0].pos = link[JOINT1].q_;
+      start_prop[0].vel = 0.0;
+      start_prop[0].acc = 0.0;
+
+      end_prop[0].pos   = 0.0 * DEG2RAD;
+      end_prop[0].vel   = 0.0 * DEG2RAD;
+      end_prop[0].acc   = 0.0 * DEG2RAD;
+
+      start_prop[1].pos = link[JOINT2].q_;
+      start_prop[1].vel = 0.0;
+      start_prop[1].acc = 0.0;
+
+      end_prop[1].pos   = 60.0 * DEG2RAD;
+      end_prop[1].vel   = 0.0 * DEG2RAD;
+      end_prop[1].acc   = 0.0 * DEG2RAD;
+
+      start_prop[2].pos = link[JOINT3].q_;
+      start_prop[2].vel = 0.0;
+      start_prop[2].acc = 0.0;
+
+      end_prop[2].pos   = -20.0 * DEG2RAD;
+      end_prop[2].vel   = 0.0 * DEG2RAD;
+      end_prop[2].acc   = 0.0 * DEG2RAD;
+
+      start_prop[3].pos = link[JOINT4].q_;
+      start_prop[3].vel = 0.0;
+      start_prop[3].acc = 0.0;
+
+      end_prop[3].pos   = -40.0 * DEG2RAD;
+      end_prop[3].vel   = 0.0 * DEG2RAD;
+      end_prop[3].acc   = 0.0 * DEG2RAD;
+
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          JOINT_NUM,
+                                          control_period,
+                                          mov_time);
+
+      moving = true;
+
+      Serial.println("get joint_tra");
     }
     else
     {
@@ -237,38 +240,39 @@ void getLinkAngle(float* angle, uint8_t from, uint8_t to)
 }
 
 /*******************************************************************************
+* Inverse Kinematics
+*******************************************************************************/
+void setIK(open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose)
+{
+    // open_manipulator::Pose goal_pose;
+    // goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
+    // goal_pose.orientation << 0.940, 0.000, -0.342,
+    //                           0.000, 1.000, 0.000,
+    //                           0.342, 0.000, 0.940;
+
+    // kinematics->sr_inverse(link, END, goal_pose);
+
+    kinematics->sr_inverse(link, to, goal_pose);
+}
+
+/*******************************************************************************
 * Write Dynamixel Position (rad)
 *******************************************************************************/
-void writeDynamixelPosition(float* angle)
+void setJointDataToDynamixel()
 {
-  int32_t joint_value[JOINT_NUM] = {0, };
+  int32_t joint_value[LINK_NUM] = {0, };
 
-  setFK(angle);
-
-  for (int num = 0; num < JOINT_NUM; num++)
+  for (int num = JOINT1; num <= JOINT_NUM; num++)
   {
-    joint_value[num] = motor_driver->convertRadian2Value(angle[num]);
+    joint_value[num-1] = motor_driver->convertRadian2Value(link[num].q_);
   }
   motor_driver->jointControl(joint_value);
 }
 
 /*******************************************************************************
-* Set joint angle
-*******************************************************************************/
-void setFK(float* angle)
-{
-  for (int num = JOINT1; num < END; num++)
-  {
-    link[num].q_ = angle[num-1];
-  }
-
-  kinematics->forward(link, BASE);
-}
-
-/*******************************************************************************
 * Set Gripper status
 *******************************************************************************/
-void setGripper(bool onoff)
+void setGripperDataToDynamixel(bool onoff)
 {
   float   gripper_pos   = grip_off;
   int32_t gripper_value = 0;

@@ -62,20 +62,23 @@ open_manipulator::Property     start_prop[JOINT_NUM];
 open_manipulator::Property     end_prop[JOINT_NUM];
 open_manipulator::Trajectory*  trajectory;
 
-void sendJointDataToProcessing(bool onoff);
-void getDataFromProcessing(bool &comm);
-void initTimer();
-void setTimer(bool onoff);
-void getDynamixelPosition();
-void getLinkAngle(float* angle, uint8_t from, uint8_t to);
-void writeDynamixelPosition(float* angle);
-void setFK(float* angle);
-void setGripper(bool onoff);
 void initLink();
+void initTimer();
 void initKinematics();
 void initTrajectory();
 void initMotor();
 void initMotorDriver(bool torque);
+
+void setTimer(bool onoff);
+void setIK(open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose);
 void establishContactToProcessing();
+
+void sendJointDataToProcessing();
+void getDataFromProcessing(bool &comm);
+void getDynamixelPosition();
+void getLinkAngle(float* angle, uint8_t from, uint8_t to);
+void setJointDataToDynamixel();
+void setGripperDataToDynamixel(bool onoff);
+
 
 #endif // OPEN_MANIPULATOR_CHAIN_CONFIG_H_

@@ -293,6 +293,14 @@ class ChildApplet extends PApplet
        .setSize(400,50)
        ;
 
+       cp5.addButton("start")
+          .setValue(0)
+          .setColorBackground(color(0, 125, 0))
+          .setPosition(0,200)
+          .setFont(createFont("arial",15))
+          .setSize(400,50)
+          ;
+
     cp5.addTextfield("Joint1")
      .setPosition(0,50)
      .setSize(180,40)
@@ -334,5 +342,10 @@ class ChildApplet extends PApplet
   public void Connect_OpenCR(int theValue)
   {
     opencr_port.write("ready");
+  }
+
+  public void start(int theValue)
+  {
+    opencr_port.write("start");
   }
 }
