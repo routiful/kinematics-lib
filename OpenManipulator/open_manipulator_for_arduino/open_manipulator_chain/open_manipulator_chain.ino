@@ -18,9 +18,9 @@
 
 #include "open_manipulator_chain_config.h"
 
-#define DEBUG
+// #define DEBUG
 // #define DYNAMIXEL
-// #define SIMULATION
+#define SIMULATION
 
 /*******************************************************************************
 * Setup
@@ -31,7 +31,7 @@ void setup()
 #ifdef DEBUG
    while(!Serial);
 #endif
-uint32_t tTime = micros();
+// uint32_t tTime = micros();
   initTimer();
 
   initLink();
@@ -47,23 +47,44 @@ uint32_t tTime = micros();
   kinematics->forward(link, BASE);
 
   start_prop[0].pos = 0.0;
-  end_prop[0].pos   = 0.0 * DEG2RAD;
+  start_prop[0].vel = 0.0;
+  start_prop[0].acc = 0.0;
+
+  end_prop[0].pos   = 30.0 * DEG2RAD;
+  end_prop[0].vel   = 0.0 * DEG2RAD;
+  end_prop[0].acc   = 0.0 * DEG2RAD;
 
   start_prop[1].pos = 0.0;
-  end_prop[1].pos   = 60.0 * DEG2RAD;
+  start_prop[1].vel = 0.0;
+  start_prop[1].acc = 0.0;
+
+  end_prop[1].pos   = 30.0 * DEG2RAD;
+  end_prop[1].vel   = 0.0 * DEG2RAD;
+  end_prop[1].acc   = 0.0 * DEG2RAD;
 
   start_prop[2].pos = 0.0;
-  end_prop[2].pos   = -20.0 * DEG2RAD;
+  start_prop[2].vel = 0.0;
+  start_prop[2].acc = 0.0;
+
+  end_prop[2].pos   = 30.0 * DEG2RAD;
+  end_prop[2].vel   = 0.0 * DEG2RAD;
+  end_prop[2].acc   = 0.0 * DEG2RAD;
 
   start_prop[3].pos = 0.0;
-  end_prop[3].pos   = -40.0 * DEG2RAD;
+  start_prop[3].vel = 0.0;
+  start_prop[3].acc = 0.0;
+
+  end_prop[3].pos   = 30.0 * DEG2RAD;
+  end_prop[3].vel   = 0.0 * DEG2RAD;
+  end_prop[3].acc   = 0.0 * DEG2RAD;
 
 
-  tra = trajectory->minimumJerk(start_prop, end_prop, 1, control_period, mov_time);
-  Serial.println(micros() - tTime);
-  //moving = true;
+  tra_m = trajectory->minimumJerk(start_prop, end_prop, 4, control_period, mov_time);
+  // tra_v = trajectory->minimumJerk(start_prop[0], end_prop[0], control_period, mov_time);
+  // Serial.println(micros() - tTime);
+  moving = true;
 
-  // setTimer(true);
+  setTimer(true);
 
 //   open_manipulator::Pose goal_pose;
 //   goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
@@ -73,7 +94,7 @@ uint32_t tTime = micros();
 
 //   kinematics->sr_inverse(link, END, goal_pose);
 
-  Serial.println("end");
+  // Serial.println("end");
 
 #ifdef SIMULATION
   establishContactToProcessing();
@@ -85,15 +106,15 @@ uint32_t tTime = micros();
 *******************************************************************************/
 void loop()
 {
-// #ifdef DEBUG
-//   getDataFromProcessing(comm);
-// #endif
-//
-// #ifdef DYNAMIXEL
-//   getDynamixelPosition();
-// #endif
-//
-//   showLedStatus();
+#ifdef SIMULATION
+  getDataFromProcessing(comm);
+#endif
+
+#ifdef DYNAMIXEL
+  getDynamixelPosition();
+#endif
+
+  showLedStatus();
 }
 
 /*******************************************************************************
@@ -114,11 +135,11 @@ void handler_control()
     {
       for (int num = 1; num <= JOINT_NUM; num++)
       {
-        link[num].q_ = tra(num-1, step_time);
+        link[num].q_ = tra_m(step_time, num-1);
       }
       step_time++;
     }
-#ifdef DEBUG
+#ifdef SIMULATION
     sendJointDatatoProcessing(comm);
 #endif
 
@@ -131,7 +152,7 @@ void handler_control()
 /*******************************************************************************
 * Send Joint Data to Processing
 *******************************************************************************/
-void sendJointDatatoProcessing(uint8_t onoff)
+void sendJointDatatoProcessing(bool onoff)
 {
   if (onoff)
   {
@@ -150,7 +171,7 @@ void sendJointDatatoProcessing(uint8_t onoff)
 /*******************************************************************************
 * Get Data From Processing
 *******************************************************************************/
-void getDataFromProcessing(uint8_t &comm)
+void getDataFromProcessing(bool &comm)
 {
   String simulator = "";
 
@@ -186,7 +207,7 @@ void initTimer()
 /*******************************************************************************
 * Onoff Timer
 *******************************************************************************/
-void setTimer(uint8_t onoff)
+void setTimer(bool onoff)
 {
   if (onoff)
     timer.start();
@@ -412,7 +433,7 @@ void initMotor()
 /*******************************************************************************
 * Initialization Motor Driver Library
 *******************************************************************************/
-void initMotorDriver(uint8_t torque)
+void initMotorDriver(bool torque)
 {
   motor_driver = new open_manipulator::MotorDriver(PROTOCOL_VERSION, BAUE_RATE);
   if (motor_driver->init(motor, 5))

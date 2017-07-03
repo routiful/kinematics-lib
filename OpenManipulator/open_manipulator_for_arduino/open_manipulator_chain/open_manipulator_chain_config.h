@@ -48,9 +48,10 @@ const float mov_time       = 2.0;
 const float control_period = 0.008;
 
 bool moving = false;
-uint8_t comm   = false;
+bool comm   = false;
 
-Eigen::MatrixXf tra;
+Eigen::MatrixXf tra_m;
+Eigen::VectorXf tra_v;
 
 HardwareTimer timer(TIMER_CH1);
 
@@ -62,5 +63,20 @@ open_manipulator::Property     start_prop[JOINT_NUM];
 open_manipulator::Property     end_prop[JOINT_NUM];
 open_manipulator::Trajectory*  trajectory;
 
+void sendJointDatatoProcessing(bool onoff);
+void getDataFromProcessing(bool &comm);
+void initTimer();
+void setTimer(bool onoff);
+void getDynamixelPosition();
+void getLinkAngle(float* angle, uint8_t from, uint8_t to);
+void writeDynamixelPosition(float* angle);
+void setFK(float* angle);
+void setGripper(bool onoff);
+void initLink();
+void initKinematics();
+void initTrajectory();
+void initMotor();
+void initMotorDriver(bool torque);
+void establishContactToProcessing();
 
 #endif // OPEN_MANIPULATOR_CHAIN_CONFIG_H_
