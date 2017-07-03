@@ -44,14 +44,13 @@
 const float grip_on  = 1.3;
 const float grip_off = 0.0;
 
-const float mov_time       = 2.0;
+float mov_time       = 2.0;
 const float control_period = 0.008;
 
 bool moving = false;
 bool comm   = false;
 
-Eigen::MatrixXf tra_m;
-Eigen::VectorXf tra_v;
+Eigen::MatrixXf joint_tra;
 
 HardwareTimer timer(TIMER_CH1);
 
@@ -63,7 +62,7 @@ open_manipulator::Property     start_prop[JOINT_NUM];
 open_manipulator::Property     end_prop[JOINT_NUM];
 open_manipulator::Trajectory*  trajectory;
 
-void sendJointDatatoProcessing(bool onoff);
+void sendJointDataToProcessing(bool onoff);
 void getDataFromProcessing(bool &comm);
 void initTimer();
 void setTimer(bool onoff);

@@ -30,10 +30,6 @@ Serial opencr_port;
 float[] joint_angle = new float[4];
 float[] gripper_pos = new float[2];
 
-// Simulation frequency
-static int tTime;
-int update_period = 125;
-
 void settings()
 {
   size(600, 600, OPENGL);
@@ -58,11 +54,7 @@ void draw()
   drawTitle();
   drawWorldFrame();
 
-  // if ((millis()-tTime) >= (1000 / update_period))
-  // {
-    drawManipulator();
-    tTime = millis();
-  // }
+  drawManipulator();
 }
 
 void connectOpenCR(int port_num)

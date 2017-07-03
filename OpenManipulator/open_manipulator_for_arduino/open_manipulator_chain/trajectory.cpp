@@ -23,21 +23,21 @@ Trajectory::Trajectory(){}
 
 Trajectory::~Trajectory(){}
 
-Eigen::MatrixXf Trajectory::minimumJerk(Property* start, Property* end, uint8_t target_num, float control_period, float mov_time)
+Eigen::MatrixXf Trajectory::minimumJerk(Property* start, Property* end, int target_num, float control_period, float mov_time)
 {
-  Eigen::MatrixXf trajectory;
+  int step_time = mov_time/control_period + 1;
+
+  Eigen::MatrixXf trajectory(step_time, target_num);
 
   Eigen::Matrix3f A = Eigen::Matrix3f::Identity(3,3);
   Eigen::Vector3f x = Eigen::Vector3f::Zero();
   Eigen::Vector3f b = Eigen::Vector3f::Zero();
 
-  int step_time = mov_time/control_period + 1;
-
   A <<     pow(mov_time,3),     pow(mov_time,4),     pow(mov_time,5),
        3 * pow(mov_time,2), 4 * pow(mov_time,3), 5 * pow(mov_time,4),
        6 * pow(mov_time,1), 12* pow(mov_time,2), 20* pow(mov_time,3);
 
-  for (int num = 0; num < (int)(target_num); num++)
+  for (int num = 0; num < target_num; num++)
   {
     float a[6] = {0, };
     Eigen::VectorXf single_trajectory(step_time);
@@ -48,7 +48,7 @@ Eigen::MatrixXf Trajectory::minimumJerk(Property* start, Property* end, uint8_t 
 
     b << end[num].pos, end[num].vel, end[num].acc;
 
-    Eigen::ColPivHouseholderQR<Eigen::MatrixXf> dec(A);
+    Eigen::ColPivHouseholderQR<Eigen::Matrix3f> dec(A);
     x = dec.solve(b);
 
     a[3] = x(0);

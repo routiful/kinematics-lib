@@ -31,7 +31,7 @@ void setup()
 #ifdef DEBUG
    while(!Serial);
 #endif
-// uint32_t tTime = micros();
+
   initTimer();
 
   initLink();
@@ -78,13 +78,9 @@ void setup()
   end_prop[3].vel   = 0.0 * DEG2RAD;
   end_prop[3].acc   = 0.0 * DEG2RAD;
 
+  joint_tra = trajectory->minimumJerk(start_prop, end_prop, 4, control_period, mov_time);
 
-  tra_m = trajectory->minimumJerk(start_prop, end_prop, 4, control_period, mov_time);
-  // tra_v = trajectory->minimumJerk(start_prop[0], end_prop[0], control_period, mov_time);
-  // Serial.println(micros() - tTime);
   moving = true;
-
-  setTimer(true);
 
 //   open_manipulator::Pose goal_pose;
 //   goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
@@ -93,8 +89,6 @@ void setup()
 //                             0.342, 0.000, 0.940;
 
 //   kinematics->sr_inverse(link, END, goal_pose);
-
-  // Serial.println("end");
 
 #ifdef SIMULATION
   establishContactToProcessing();
@@ -124,23 +118,24 @@ void handler_control()
 {
   if (moving && comm)
   {
-    static uint32_t step_time = 0;
+    uint8_t step_time = mov_time/control_period + 1;
+    static uint32_t cnt = 0;
 
-    if (step_time == (uint32_t)(mov_time/control_period + 1))
+    if (cnt == step_time)
     {
       moving = false;
-      step_time = 0;
+      cnt = 0;
     }
     else
     {
-      for (int num = 1; num <= JOINT_NUM; num++)
+      for (int num = JOINT1; num <= JOINT_NUM; num++)
       {
-        link[num].q_ = tra_m(step_time, num-1);
+        link[num].q_ = joint_tra(cnt, num-1);
       }
-      step_time++;
+      cnt++;
     }
 #ifdef SIMULATION
-    sendJointDatatoProcessing(comm);
+    sendJointDataToProcessing(comm);
 #endif
 
 #ifdef DYNAMIXEL
@@ -152,7 +147,7 @@ void handler_control()
 /*******************************************************************************
 * Send Joint Data to Processing
 *******************************************************************************/
-void sendJointDatatoProcessing(bool onoff)
+void sendJointDataToProcessing(bool onoff)
 {
   if (onoff)
   {
