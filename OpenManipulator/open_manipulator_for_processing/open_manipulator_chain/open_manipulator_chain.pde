@@ -11,9 +11,6 @@ ChildApplet child;
 // Control Interface
 import controlP5.*;
 
-// Control variables
-ControlP5 cp5;
-
 // Init serial
 import processing.serial.*;
 
@@ -266,7 +263,13 @@ void keyPressed()
 
 class ChildApplet extends PApplet
 {
-  //JFrame frame;
+  ControlP5 cp5;
+
+  Textlabel myTextlabelA;
+
+  Knob joint1, joint2, joint3, joint4, gripper;
+
+  float grip_angle;
 
   public ChildApplet()
   {
@@ -276,7 +279,7 @@ class ChildApplet extends PApplet
 
   public void settings()
   {
-    size(400, 600);
+    size(400, 800);
     smooth();
   }
   public void setup()
@@ -285,53 +288,122 @@ class ChildApplet extends PApplet
 
     cp5 = new ControlP5(this);
 
-    cp5.addButton("Connect_OpenCR")
-       .setValue(0)
-       .setColorBackground(color(0, 125, 0))
-       .setPosition(0,0)
-       .setFont(createFont("arial",15))
-       .setSize(400,50)
+    cp5.addTab("Application")
+       .setColorBackground(color(0, 160, 100))
+       .setColorLabel(color(255))
+       .setColorActive(color(255,128,0))
        ;
 
-       cp5.addButton("start")
-          .setValue(0)
-          .setColorBackground(color(0, 125, 0))
-          .setPosition(0,200)
-          .setFont(createFont("arial",15))
-          .setSize(400,50)
-          ;
+    cp5.getTab("default")
+       .activateEvent(true)
+       .setLabel("JointSpaceControl")
+       .setId(1)
+       ;
 
-    cp5.addTextfield("Joint1")
-     .setPosition(0,50)
-     .setSize(180,40)
-     .setFont(createFont("arial",13))
-     .setFocus(true)
-     .setColor(color(255,0,0))
-     ;
+    cp5.getTab("Application")
+       .activateEvent(true)
+       .setId(2)
+       ;
 
-    cp5.addTextfield("Joint2")
-     .setPosition(220,50)
-     .setSize(180,40)
-     .setFont(createFont("arial",13))
-     .setFocus(true)
-     .setColor(color(255,0,0))
-     ;
+    myTextlabelA = cp5.addTextlabel("label")
+                     .setText("Controller for OpenManipulator Chain")
+                     .setPosition(10,20)
+                     .setColorValue(0xffffff00)
+                     .setFont(createFont("Georgia",20))
+                     ;
 
-    cp5.addTextfield("Joint3")
-     .setPosition(0,120)
-     .setSize(180,40)
-     .setFont(createFont("arial",13))
-     .setFocus(true)
-     .setColor(color(255,0,0))
-     ;
+    cp5.addToggle("Controller_OnOff")
+       .setPosition(0,50)
+       .setSize(400,50)
+       .setMode(Toggle.SWITCH)
+       .setFont(createFont("arial",15))
+       ;
 
-    cp5.addTextfield("Joint4")
-     .setPosition(220,120)
-     .setSize(180,40)
-     .setFont(createFont("arial",13))
-     .setFocus(true)
-     .setColor(color(255,0,0))
-     ;
+    joint1 = cp5.addKnob("joint1")
+             .setRange(-3.14,3.14)
+             .setValue(0)
+             .setPosition(50,150)
+             .setRadius(60)
+             .setDragDirection(Knob.HORIZONTAL)
+             .setFont(createFont("arial",10))
+             .setColorForeground(color(255))
+             .setColorBackground(color(0, 160, 100))
+             .setColorActive(color(255,255,0))
+             ;
+
+    joint2 = cp5.addKnob("joint2")
+             .setRange(-3.14,3.14)
+             .setValue(0)
+             .setPosition(220,150)
+             .setRadius(60)
+             .setDragDirection(Knob.HORIZONTAL)
+             .setFont(createFont("arial",10))
+             .setColorForeground(color(255))
+             .setColorBackground(color(0, 160, 100))
+             .setColorActive(color(255,255,0))
+             ;
+
+    joint3 = cp5.addKnob("joint3")
+             .setRange(-3.14,3.14)
+             .setValue(0)
+             .setPosition(50,300)
+             .setRadius(60)
+             .setDragDirection(Knob.HORIZONTAL)
+             .setFont(createFont("arial",10))
+             .setColorForeground(color(255))
+             .setColorBackground(color(0, 160, 100))
+             .setColorActive(color(255,255,0))
+             ;
+
+    joint4 = cp5.addKnob("joint4")
+             .setRange(-3.14,3.14)
+             .setValue(0)
+             .setPosition(220,300)
+             .setRadius(60)
+             .setDragDirection(Knob.HORIZONTAL)
+             .setFont(createFont("arial",10))
+             .setColorForeground(color(255))
+             .setColorBackground(color(0, 160, 100))
+             .setColorActive(color(255,255,0))
+             ;
+
+    gripper = cp5.addKnob("gripper")
+                .setRange(0.0, 0.8)
+                .setValue(0.4)
+                .setPosition(135,440)
+                .setRadius(60)
+                .setDragDirection(Knob.HORIZONTAL)
+                .setFont(createFont("arial",10))
+                .setColorForeground(color(255))
+                .setColorBackground(color(0, 160, 100))
+                .setColorActive(color(255,255,0))
+                ;
+
+    cp5.addButton("Send_Joint_Angle")
+       .setValue(0)
+       .setPosition(0,610)
+       .setSize(400,40)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.addButton("Set_Gripper")
+       .setValue(0)
+       .setPosition(0,670)
+       .setSize(400,40)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.addToggle("Gripper_OnOff")
+       .setPosition(0,730)
+       .setSize(400,40)
+       .setMode(Toggle.SWITCH)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.getController("label").moveTo("global");
+    cp5.getController("Controller_OnOff").moveTo("global");
+
+    // cp5.getController("sliderValue").moveTo("extra");
   }
 
   public void draw()
@@ -339,13 +411,70 @@ class ChildApplet extends PApplet
     background(0);
   }
 
-  public void Connect_OpenCR(int theValue)
+  void Controller_OnOff(boolean flag)
   {
-    opencr_port.write("ready");
+    if (flag)
+    {
+      opencr_port.write("ready" + '\n');
+      println("OpenManipulator Chain Ready!!!");
+    }
+    else
+    {
+      opencr_port.write("stop" + '\n');
+      println("OpenManipulator Chain End...");
+    }
   }
 
-  public void start(int theValue)
+  void joint1(float angle)
   {
-    opencr_port.write("start");
+    joint_angle[0] = angle;
+  }
+
+  void joint2(float angle)
+  {
+    joint_angle[1] = angle;
+  }
+
+  void joint3(float angle)
+  {
+    joint_angle[2] = angle;
+  }
+
+  void joint4(float angle)
+  {
+    joint_angle[3] = angle;
+  }
+
+  void gripper(float angle)
+  {
+    grip_angle = angle;
+    gripperAngle2Pos(angle);
+  }
+
+  public void Send_Joint_Angle(int theValue)
+  {
+    opencr_port.write("joint"        + ',' +
+                      joint_angle[0] + ',' +
+                      joint_angle[1] + ',' +
+                      joint_angle[2] + ',' +
+                      joint_angle[3] + '\n');
+  }
+
+  public void Set_Gripper(int theValue)
+  {
+    opencr_port.write("gripper"  + ',' +
+                      grip_angle + '\n');
+  }
+
+  void Gripper_OnOff(boolean flag)
+  {
+    if (flag)
+    {
+      opencr_port.write("on" + '\n');
+    }
+    else
+    {
+      opencr_port.write("off" + '\n');
+    }
   }
 }

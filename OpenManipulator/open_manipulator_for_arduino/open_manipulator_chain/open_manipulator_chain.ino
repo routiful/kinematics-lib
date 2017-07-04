@@ -19,7 +19,7 @@
 #include "open_manipulator_chain_config.h"
 
 #define DEBUG
-#define DYNAMIXEL
+// #define DYNAMIXEL
 // #define SIMULATION
 
 /*******************************************************************************
@@ -49,7 +49,9 @@ void setup()
 
   setFK(link, BASE);
 
+#ifdef DEBUG
   Serial.println("OpenManipulator Chain Initialization Success!!");
+#endif
 }
 
 /*******************************************************************************
@@ -57,22 +59,106 @@ void setup()
 *******************************************************************************/
 void loop()
 {
-  // getDynamixelPosition();
-  //
-  //
-  // Serial.print(motor[JOINT1].present_position,5);
-  // Serial.print(",");
-  // Serial.print(motor[JOINT2].present_position,5);
-  // Serial.print(",");
-  // Serial.print(motor[JOINT3].present_position,5);
-  // Serial.print(",");
-  // Serial.print(motor[JOINT4].present_position,5);
-  // Serial.print(",");
-  // Serial.println(motor[END].present_position,5);
-
   getDataFromProcessing(comm);
 
   showLedStatus();
+}
+
+/*******************************************************************************
+* Get Data From Processing
+*******************************************************************************/
+void getDataFromProcessing(bool &comm)
+{
+  String get = "";
+  String cmd[50];
+
+  if (Serial.available())
+  {
+    get = Serial.readStringUntil('\n');
+    get.trim();
+
+    split(get, ',', cmd);
+
+#ifdef DEBUG
+    Serial.println(cmd[0]);
+    Serial.println(cmd[1].toFloat());
+    Serial.println(cmd[2].toFloat());
+    Serial.println(cmd[3].toFloat());
+    Serial.println(cmd[4].toFloat());
+#endif
+
+    if (cmd[0] == "ready")
+    {
+#ifdef DYNAMIXEL
+      initMotorTorque(true);
+      getDynamixelPosition();
+      sendInitJointDataToProcessing();
+#endif
+      comm = true;
+    }
+    else if (cmd[0] == "stop")
+    {
+#ifdef DYNAMIXEL
+      initMotorTorque(false);
+#endif
+      comm = false;
+    }
+    else if (cmd[0] == "joint")
+    {
+      float joint_pos[LINK_NUM] = {0.0,
+                                   cmd[JOINT1].toFloat(),
+                                   cmd[JOINT2].toFloat(),
+                                   cmd[JOINT3].toFloat(),
+                                   cmd[JOINT4].toFloat(),
+                                   0.0};
+      setJointPropPos(joint_pos);
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          LINK_NUM,
+                                          control_period,
+                                          mov_time);
+
+      moving = true;
+    }
+    else if (cmd[0] == "gripper")
+    {
+
+      setGripperPropPos(cmd[1].toFloat());
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          LINK_NUM,
+                                          control_period,
+                                          mov_time);
+
+      moving = true;
+    }
+    else if (cmd[0] == "on")
+    {
+      setGripperPropPos(grip_on);
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          LINK_NUM,
+                                          control_period,
+                                          mov_time);
+
+      moving = true;
+    }
+    else if (cmd[0] == "off")
+    {
+      setGripperPropPos(grip_off);
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          LINK_NUM,
+                                          control_period,
+                                          mov_time);
+
+      moving = true;
+    }
+    else
+    {
+      comm = comm;
+    }
+  }
 }
 
 /*******************************************************************************
@@ -80,35 +166,17 @@ void loop()
 *******************************************************************************/
 void handler_control()
 {
+  uint8_t step_time = mov_time/control_period + 1;
+  static uint32_t cnt = 0;
+
   if (moving && comm)
   {
-    uint8_t step_time = mov_time/control_period + 1;
-    static uint32_t cnt = 0;
-
     if (cnt >= step_time)
     {
+#ifdef DYNAMIXEL
       getDynamixelPosition();
+#endif
       kinematics->forward(link, BASE);
-
-      Serial.print(motor[JOINT1].present_position ,5);
-      Serial.print(",");
-      Serial.print(motor[JOINT2].present_position ,5);
-      Serial.print(",");
-      Serial.print(motor[JOINT3].present_position ,5);
-      Serial.print(",");
-      Serial.print(motor[JOINT4].present_position ,5);
-      Serial.print(",");
-      Serial.println(motor[END].present_position ,5);
-
-      Serial.print(link[JOINT1].q_,5);
-      Serial.print(",");
-      Serial.print(link[JOINT2].q_,5);
-      Serial.print(",");
-      Serial.print(link[JOINT3].q_,5);
-      Serial.print(",");
-      Serial.print(link[JOINT4].q_,5);
-      Serial.print(",");
-      Serial.println(link[END].q_,5);
 
       moving = false;
       cnt = 0;
@@ -125,11 +193,13 @@ void handler_control()
     sendJointDataToProcessing();
 #endif
 
-#ifdef DYNAMIXEL
-      setJointDataToDynamixel();
+#ifdef DEBUG
+    sendJointDataToProcessing();
+#endif
 
-      // if (cnt%5 == 0)
-      //   getDynamixelPosition();
+#ifdef DYNAMIXEL
+    setJointDataToDynamixel();
+    setGripperDataToDynamixel();
 #endif
   }
 }
@@ -139,108 +209,146 @@ void handler_control()
 *******************************************************************************/
 void sendJointDataToProcessing()
 {
-  Serial.print(link[JOINT1].q_,5);
-  Serial.print(",");
-  Serial.print(link[JOINT2].q_,5);
-  Serial.print(",");
-  Serial.print(link[JOINT3].q_,5);
-  Serial.print(",");
-  Serial.print(link[JOINT4].q_,5);
-  Serial.print(",");
-  Serial.println(link[END].q_,5);
-
   float angle[LINK_NUM];
+
+  Serial.print(link[JOINT1].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT2].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT3].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT4].q_);
+  Serial.print(",");
+  Serial.println(link[END].q_);
+
   getLinkAngle(angle);
 }
 
 /*******************************************************************************
-* Get Data From Processing
+* Send Joint Data to Processing
 *******************************************************************************/
-void getDataFromProcessing(bool &comm)
+void sendInitJointDataToProcessing()
 {
-  String simulator = "";
+  float angle[LINK_NUM];
+  getMotorAngle(angle);
 
-  if (Serial.available())
-  {
-    simulator = Serial.readString();
-    Serial.println(simulator);
+  Serial.print(link[JOINT1].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT2].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT3].q_);
+  Serial.print(",");
+  Serial.print(link[JOINT4].q_);
+  Serial.print(",");
+  Serial.println(link[END].q_);
+}
 
-    if (simulator == "ready")
-    {
-      initMotorTorque(true);
-      getDynamixelPosition();
+/*******************************************************************************
+* Set Joint Position
+*******************************************************************************/
+void setJointPropPos(float* joint_pos)
+{
+  start_prop[BASE].pos = 0.0;
+  start_prop[BASE].vel = 0.0;
+  start_prop[BASE].acc = 0.0;
 
-      comm = true;
-    }
-    else if (simulator == "stop")
-    {
-      initMotorTorque(false);
+  end_prop[BASE].pos   = 0.0;
+  end_prop[BASE].vel   = 0.0;
+  end_prop[BASE].acc   = 0.0;
 
-      comm = false;
-    }
-    else if (simulator == "start")
-    {
-      start_prop[BASE].pos = 0.0;
-      start_prop[BASE].vel = 0.0;
-      start_prop[BASE].acc = 0.0;
+  start_prop[JOINT1].pos = motor[JOINT1].present_position;
+  start_prop[JOINT1].vel = 0.0;
+  start_prop[JOINT1].acc = 0.0;
 
-      end_prop[BASE].pos   = 0.0 * DEG2RAD;
-      end_prop[BASE].vel   = 0.0 * DEG2RAD;
-      end_prop[BASE].acc   = 0.0 * DEG2RAD;
+  end_prop[JOINT1].pos   = joint_pos[JOINT1];
+  end_prop[JOINT1].vel   = 0.0;
+  end_prop[JOINT1].acc   = 0.0;
 
-      start_prop[JOINT1].pos = motor[JOINT1].present_position;
-      start_prop[JOINT1].vel = 0.0;
-      start_prop[JOINT1].acc = 0.0;
+  start_prop[JOINT2].pos = motor[JOINT2].present_position;
+  start_prop[JOINT2].vel = 0.0;
+  start_prop[JOINT2].acc = 0.0;
 
-      end_prop[JOINT1].pos   = 0.0 * DEG2RAD;
-      end_prop[JOINT1].vel   = 0.0 * DEG2RAD;
-      end_prop[JOINT1].acc   = 0.0 * DEG2RAD;
+  end_prop[JOINT2].pos   = joint_pos[JOINT2];
+  end_prop[JOINT2].vel   = 0.0;
+  end_prop[JOINT2].acc   = 0.0;
 
-      start_prop[JOINT2].pos = motor[JOINT2].present_position;
-      start_prop[JOINT2].vel = 0.0;
-      start_prop[JOINT2].acc = 0.0;
+  start_prop[JOINT3].pos = motor[JOINT3].present_position;
+  start_prop[JOINT3].vel = 0.0;
+  start_prop[JOINT3].acc = 0.0;
 
-      end_prop[JOINT2].pos   = 60.0 * DEG2RAD;
-      end_prop[JOINT2].vel   = 0.0 * DEG2RAD;
-      end_prop[JOINT2].acc   = 0.0 * DEG2RAD;
+  end_prop[JOINT3].pos   = joint_pos[JOINT3];
+  end_prop[JOINT3].vel   = 0.0;
+  end_prop[JOINT3].acc   = 0.0;
 
-      start_prop[JOINT3].pos = motor[JOINT3].present_position;
-      start_prop[JOINT3].vel = 0.0;
-      start_prop[JOINT3].acc = 0.0;
+  start_prop[JOINT4].pos = motor[JOINT4].present_position;
+  start_prop[JOINT4].vel = 0.0;
+  start_prop[JOINT4].acc = 0.0;
 
-      end_prop[JOINT3].pos   = -20.0 * DEG2RAD;
-      end_prop[JOINT3].vel   = 0.0 * DEG2RAD;
-      end_prop[JOINT3].acc   = 0.0 * DEG2RAD;
+  end_prop[JOINT4].pos   = joint_pos[JOINT4];
+  end_prop[JOINT4].vel   = 0.0;
+  end_prop[JOINT4].acc   = 0.0;
 
-      start_prop[JOINT4].pos = motor[JOINT4].present_position;
-      start_prop[JOINT4].vel = 0.0;
-      start_prop[JOINT4].acc = 0.0;
+  start_prop[END].pos = motor[END].present_position;
+  start_prop[END].vel = 0.0;
+  start_prop[END].acc = 0.0;
 
-      end_prop[JOINT4].pos   = -40.0 * DEG2RAD;
-      end_prop[JOINT4].vel   = 0.0 * DEG2RAD;
-      end_prop[JOINT4].acc   = 0.0 * DEG2RAD;
+  end_prop[END].pos   = motor[END].present_position;
+  end_prop[END].vel   = 0.0;
+  end_prop[END].acc   = 0.0;
+}
 
-      start_prop[END].pos = motor[END].present_position;
-      start_prop[END].vel = 0.0;
-      start_prop[END].acc = 0.0;
+/*******************************************************************************
+* Set Gripper Position
+*******************************************************************************/
+void setGripperPropPos(float gripper)
+{
+  start_prop[BASE].pos = 0.0;
+  start_prop[BASE].vel = 0.0;
+  start_prop[BASE].acc = 0.0;
 
-      end_prop[END].pos   = motor[END].present_position;
-      end_prop[END].vel   = 0.0 * DEG2RAD;
-      end_prop[END].acc   = 0.0 * DEG2RAD;
+  end_prop[BASE].pos   = 0.0;
+  end_prop[BASE].vel   = 0.0;
+  end_prop[BASE].acc   = 0.0;
 
-      joint_tra = trajectory->minimumJerk(start_prop,
-                                          end_prop,
-                                          LINK_NUM,
-                                          control_period,
-                                          mov_time);
+  start_prop[JOINT1].pos = motor[JOINT1].present_position;
+  start_prop[JOINT1].vel = 0.0;
+  start_prop[JOINT1].acc = 0.0;
 
-      moving = true;
-    }
-    else
-    {
-      comm = comm;
-    }
-  }
+  end_prop[JOINT1].pos   = motor[JOINT1].present_position;
+  end_prop[JOINT1].vel   = 0.0;
+  end_prop[JOINT1].acc   = 0.0;
+
+  start_prop[JOINT2].pos = motor[JOINT2].present_position;
+  start_prop[JOINT2].vel = 0.0;
+  start_prop[JOINT2].acc = 0.0;
+
+  end_prop[JOINT2].pos   = motor[JOINT2].present_position;
+  end_prop[JOINT2].vel   = 0.0;
+  end_prop[JOINT2].acc   = 0.0;
+
+  start_prop[JOINT3].pos = motor[JOINT3].present_position;
+  start_prop[JOINT3].vel = 0.0;
+  start_prop[JOINT3].acc = 0.0;
+
+  end_prop[JOINT3].pos   = motor[JOINT3].present_position;
+  end_prop[JOINT3].vel   = 0.0;
+  end_prop[JOINT3].acc   = 0.0;
+
+  start_prop[JOINT4].pos = motor[JOINT4].present_position;
+  start_prop[JOINT4].vel = 0.0;
+  start_prop[JOINT4].acc = 0.0;
+
+  end_prop[JOINT4].pos   = motor[JOINT4].present_position;
+  end_prop[JOINT4].vel   = 0.0;
+  end_prop[JOINT4].acc   = 0.0;
+
+  start_prop[END].pos = motor[END].present_position;
+  start_prop[END].vel = 0.0;
+  start_prop[END].acc = 0.0;
+
+  end_prop[END].pos   = gripper;
+  end_prop[END].vel   = 0.0;
+  end_prop[END].acc   = 0.0;
 }
 
 /*******************************************************************************
@@ -274,6 +382,21 @@ void getLinkAngle(float* angle)
   }
 }
 
+/*******************************************************************************
+* Get Motor Position (rad)
+*******************************************************************************/
+void getMotorAngle(float* angle)
+{
+  for (int num = BASE; num <= END; num++)
+  {
+    link[num].q_ = motor[num].present_position;
+    angle[num] = link[num].q_;
+  }
+}
+
+/*******************************************************************************
+* Forward Kinematics
+*******************************************************************************/
 void setFK(open_manipulator::Link* link, int8_t me)
 {
   kinematics->forward(link, me);
@@ -312,17 +435,11 @@ void setJointDataToDynamixel()
 /*******************************************************************************
 * Set Gripper status
 *******************************************************************************/
-void setGripperDataToDynamixel(bool onoff)
+void setGripperDataToDynamixel()
 {
-  float   gripper_pos   = grip_off;
   int32_t gripper_value = 0;
 
-  if (onoff)
-    gripper_pos = grip_on;
-  else
-    gripper_pos = grip_off;
-
-  gripper_value = motor_driver->convertRadian2Value(gripper_pos);
+  gripper_value = motor_driver->convertRadian2Value(link[END].q_);
   motor_driver->gripControl(gripper_value);
 }
 
@@ -494,7 +611,44 @@ void establishContactToProcessing()
 {
   if (Serial.available())
   {
-    Serial.println("0.0, 0.0, 0.0, 0.0, 0.0");
+    Serial.print(0.0);
+    Serial.print(",");
+    Serial.print(0.0);
+    Serial.print(",");
+    Serial.print(0.0);
+    Serial.print(",");
+    Serial.print(0.0);
+    Serial.print(",");
+    Serial.println(0.0);
     delay(300);
   }
+}
+
+/*******************************************************************************
+* Split String
+*******************************************************************************/
+void split(String data, char separator, String* temp)
+{
+	int cnt = 0;
+	int get_index = 0;
+
+	String copy = data;
+
+	while(true)
+	{
+		get_index = copy.indexOf(separator);
+
+		if(-1 != get_index)
+		{
+			temp[cnt] = copy.substring(0, get_index);
+
+			copy = copy.substring(get_index + 1);
+		}
+		else
+		{
+      temp[cnt] = copy.substring(0, copy.length());
+			break;
+		}
+		++cnt;
+	}
 }
