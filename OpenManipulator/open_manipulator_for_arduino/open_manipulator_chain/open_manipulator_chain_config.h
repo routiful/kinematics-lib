@@ -52,33 +52,37 @@ bool comm   = false;
 
 Eigen::MatrixXf joint_tra;
 
-HardwareTimer timer(TIMER_CH1);
+HardwareTimer control_timer(TIMER_CH1);
 
-open_manipulator::Motor        motor[JOINT_NUM+GRIP_NUM];
+open_manipulator::Motor        motor[LINK_NUM];
 open_manipulator::Link         link[LINK_NUM];
 open_manipulator::Kinematics*  kinematics;
 open_manipulator::MotorDriver* motor_driver;
-open_manipulator::Property     start_prop[JOINT_NUM];
-open_manipulator::Property     end_prop[JOINT_NUM];
+open_manipulator::Property     start_prop[LINK_NUM];
+open_manipulator::Property     end_prop[LINK_NUM];
 open_manipulator::Trajectory*  trajectory;
 
-void initLink();
+void initLinkAndMotor();
 void initTimer();
 void initKinematics();
 void initTrajectory();
-void initMotor();
 void initMotorDriver(bool torque);
+void initMotorTorque(bool onoff);
 
-void setTimer(bool onoff);
-void setIK(open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose);
 void establishContactToProcessing();
 
-void sendJointDataToProcessing();
-void getDataFromProcessing(bool &comm);
-void getDynamixelPosition();
-void getLinkAngle(float* angle, uint8_t from, uint8_t to);
+void setFK(open_manipulator::Link* link, int8_t me);
+void setIK(open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose);
+
+// DYNAMIXEL
 void setJointDataToDynamixel();
 void setGripperDataToDynamixel(bool onoff);
+void getDynamixelPosition();
 
+// PROCESSING
+void sendJointDataToProcessing();
+void getDataFromProcessing(bool &comm);
+
+void getLinkAngle();
 
 #endif // OPEN_MANIPULATOR_CHAIN_CONFIG_H_

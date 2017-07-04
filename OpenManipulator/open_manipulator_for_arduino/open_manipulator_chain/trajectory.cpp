@@ -46,7 +46,9 @@ Eigen::MatrixXf Trajectory::minimumJerk(Property* start, Property* end, int targ
     a[1] =     start[num].vel;
     a[2] = 2 * start[num].acc;
 
-    b << end[num].pos, end[num].vel, end[num].acc;
+    b << (end[num].pos - start[num].pos),
+         (end[num].vel - start[num].vel),
+         (end[num].acc - start[num].acc);
 
     Eigen::ColPivHouseholderQR<Eigen::Matrix3f> dec(A);
     x = dec.solve(b);
@@ -63,7 +65,10 @@ Eigen::MatrixXf Trajectory::minimumJerk(Property* start, Property* end, int targ
                                a[3]*pow(control_period*cnt,3) +
                                a[4]*pow(control_period*cnt,4) +
                                a[5]*pow(control_period*cnt,5);
+
+                                  //  Serial.println(single_trajectory(cnt), 5);
     }
+    // Serial.println("");
     trajectory.col(num) = single_trajectory;
   }
 

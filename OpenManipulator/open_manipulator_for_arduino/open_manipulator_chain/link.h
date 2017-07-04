@@ -24,6 +24,7 @@
 
 namespace open_manipulator
 {
+
 class Link
 {
  public:

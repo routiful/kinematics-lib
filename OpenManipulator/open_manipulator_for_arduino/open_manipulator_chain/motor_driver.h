@@ -53,26 +53,22 @@
 
 namespace open_manipulator
 {
-
 typedef struct
 {
-  uint8_t  motor_id;
-  uint8_t  joint_id;
-  uint8_t  grip_id;
-  String   name;
-}Motor;
+  String name;
+  uint8_t id;
+  float goal_position;
+  float present_position;
+} Motor;
 
 class MotorDriver
 {
  private:
   Motor* motor_;
-
   uint8_t  motor_num_;
 
   uint32_t baud_rate_;
   float    protocol_version_;
-
-  int32_t read_value_[];
 
   dynamixel::PortHandler   *portHandler_;
   dynamixel::PacketHandler *packetHandler_;
@@ -99,7 +95,7 @@ class MotorDriver
   bool jointControl(int32_t *value);
   bool gripControl (int32_t value);
 
-  int32_t* readPosition();
+  bool readPosition(Motor* get_motor);
 
   int32_t convertRadian2Value(float radian);
   float    convertValue2Radian(int32_t value);

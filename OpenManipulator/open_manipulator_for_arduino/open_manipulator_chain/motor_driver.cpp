@@ -81,7 +81,7 @@ void MotorDriver::close(void)
 
 void MotorDriver::getMotor(Motor* motor, uint8_t motor_num)
 {
-  motor_    = motor;
+  motor_     = motor;
   motor_num_ = motor_num;
 }
 
@@ -92,14 +92,17 @@ bool MotorDriver::setTorque(uint8_t onoff)
 
   uint8_t param_torque[4];
 
-  for (int num = 0; num < motor_num_; num++)
+  for (int num = 0; num <= motor_num_; num++)
   {
+    if (motor_[num].id == 0)
+      continue;
+
     param_torque[0] = DXL_LOBYTE(DXL_LOWORD(onoff));
     param_torque[1] = DXL_HIBYTE(DXL_LOWORD(onoff));
     param_torque[2] = DXL_LOBYTE(DXL_HIWORD(onoff));
     param_torque[3] = DXL_HIBYTE(DXL_HIWORD(onoff));
 
-    dxl_addparam_result_ = groupSyncWriteTorque_->addParam(motor_[num].motor_id, (uint8_t*)&param_torque);
+    dxl_addparam_result_ = groupSyncWriteTorque_->addParam(motor_[num].id, (uint8_t*)&param_torque);
     if (dxl_addparam_result_ != true)
       return false;
   }
@@ -122,15 +125,7 @@ bool MotorDriver::jointControl(int32_t* value)
 
   uint8_t param_goal_position[4];
 
-  // Serial.print(value[0]);
-  // Serial.print(",");
-  // Serial.print(value[1]);
-  // Serial.print(",");
-  // Serial.print(value[2]);
-  // Serial.print(",");
-  // Serial.println(value[3]);
-
-  for (int num = 0; num < motor_num_; num++)
+  for (int num = 0; num <= motor_num_; num++)
   {
     if (motor_[num].name.substring(0,5) == "Joint")
     {
@@ -139,40 +134,7 @@ bool MotorDriver::jointControl(int32_t* value)
       param_goal_position[2] = DXL_LOBYTE(DXL_HIWORD(value[num]));
       param_goal_position[3] = DXL_HIBYTE(DXL_HIWORD(value[num]));
 
-      dxl_addparam_result = groupSyncWritePosition_->addParam(motor_[num].motor_id, (uint8_t*)&param_goal_position);
-      if (dxl_addparam_result != true)
-        return false;
-    }
-  }
-  //
-  // dxl_comm_result = groupSyncWritePosition_->txPacket();
-  // if (dxl_comm_result != COMM_SUCCESS)
-  // {
-  //   packetHandler_->printTxRxResult(dxl_comm_result);
-  //   return false;
-  // }
-  //
-  // groupSyncWritePosition_->clearParam();
-  // return true;
-}
-
-bool MotorDriver::gripControl(int32_t value)
-{
-  bool dxl_addparam_result;
-  int8_t dxl_comm_result;
-
-  uint8_t param_goal_position[4];
-
-  for (int num = 0; num < motor_num_; num++)
-  {
-    if (motor_[num].name.substring(0,7) == "Gripper")
-    {
-      param_goal_position[0] = DXL_LOBYTE(DXL_LOWORD(value));
-      param_goal_position[1] = DXL_HIBYTE(DXL_LOWORD(value));
-      param_goal_position[2] = DXL_LOBYTE(DXL_HIWORD(value));
-      param_goal_position[3] = DXL_HIBYTE(DXL_HIWORD(value));
-
-      dxl_addparam_result = groupSyncWritePosition_->addParam(motor_[num].motor_id, (uint8_t*)&param_goal_position);
+      dxl_addparam_result = groupSyncWritePosition_->addParam(motor_[num].id, (uint8_t*)&param_goal_position);
       if (dxl_addparam_result != true)
         return false;
     }
@@ -189,18 +151,54 @@ bool MotorDriver::gripControl(int32_t value)
   return true;
 }
 
-int32_t* MotorDriver::readPosition()
+bool MotorDriver::gripControl(int32_t value)
+{
+  bool dxl_addparam_result;
+  int8_t dxl_comm_result;
+
+  uint8_t param_goal_position[4];
+
+  for (int num = 0; num <= motor_num_; num++)
+  {
+    if (motor_[num].name.substring(0,7) == "Gripper")
+    {
+      param_goal_position[0] = DXL_LOBYTE(DXL_LOWORD(value));
+      param_goal_position[1] = DXL_HIBYTE(DXL_LOWORD(value));
+      param_goal_position[2] = DXL_LOBYTE(DXL_HIWORD(value));
+      param_goal_position[3] = DXL_HIBYTE(DXL_HIWORD(value));
+
+      dxl_addparam_result = groupSyncWritePosition_->addParam(motor_[num].id, (uint8_t*)&param_goal_position);
+      if (dxl_addparam_result != true)
+        return false;
+    }
+  }
+
+  dxl_comm_result = groupSyncWritePosition_->txPacket();
+  if (dxl_comm_result != COMM_SUCCESS)
+  {
+    packetHandler_->printTxRxResult(dxl_comm_result);
+    return false;
+  }
+
+  groupSyncWritePosition_->clearParam();
+  return true;
+}
+
+bool MotorDriver::readPosition(Motor* get_motor)
 {
   int dxl_comm_result = COMM_TX_FAIL;              // Communication result
   bool dxl_addparam_result = false;                // addParam result
   bool dxl_getdata_result = false;                 // GetParam result
 
-  read_value_[motor_num_] = {0, };
+  int32_t read_value[motor_num_] = {0, };
 
-  for (int num = 0; num < motor_num_; num++)
+  for (int num = 0; num <= motor_num_; num++)
   {
+    if (get_motor[num].id == 0)
+      continue;
+
     // Set parameter
-    dxl_addparam_result = groupSyncReadPosition_->addParam(motor_[num].motor_id);
+    dxl_addparam_result = groupSyncReadPosition_->addParam(get_motor[num].id);
     if (dxl_addparam_result != true)
       return false;
   }
@@ -210,19 +208,23 @@ int32_t* MotorDriver::readPosition()
   if (dxl_comm_result != COMM_SUCCESS)
     packetHandler_->printTxRxResult(dxl_comm_result);
 
-  for (int num = 0; num < motor_num_; num++)
+  for (int num = 0; num <= motor_num_; num++)
   {
+    if (get_motor[num].id == 0)
+      continue;
+
     // Check if groupSyncRead data of Dynamixels are available
-    dxl_getdata_result = groupSyncReadPosition_->isAvailable(motor_[num].motor_id, ADDR_X_PRESENT_POSITION, LEN_X_PRESENT_POSITION);
+    dxl_getdata_result = groupSyncReadPosition_->isAvailable(get_motor[num].id, ADDR_X_PRESENT_POSITION, LEN_X_PRESENT_POSITION);
     if (dxl_getdata_result != true)
       return false;
 
     // Get data
-    read_value_[num] = groupSyncReadPosition_->getData(motor_[num].motor_id,  ADDR_X_PRESENT_POSITION, LEN_X_PRESENT_POSITION);
+    read_value[num] = groupSyncReadPosition_->getData(get_motor[num].id,  ADDR_X_PRESENT_POSITION, LEN_X_PRESENT_POSITION);
+    get_motor[num].present_position = convertValue2Radian(read_value[num]);
   }
 
   groupSyncReadPosition_->clearParam();
-  return read_value_;
+  return true;
 }
 
 int32_t MotorDriver::convertRadian2Value(float radian)
