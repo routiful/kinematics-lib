@@ -41,7 +41,7 @@ void setup()
   initShape();
   initView();
 
-  connectOpenCR(0);
+  connectOpenCR(7);
 }
 
 void draw()
@@ -68,21 +68,27 @@ void serialEvent(Serial opencr_port)
   String opencr_string = opencr_port.readStringUntil('\n');
   opencr_string = trim(opencr_string);
 
-  float[] angles = float(split(opencr_string, ','));
+  String[] cmd = split(opencr_string, ',');
 
-  for (int joint_num = 0; joint_num < angles.length; joint_num++)
+  if (cmd[0].equals("angle"))
   {
-    if (joint_num == angles.length-1)
+    for (int cmd_cnt = 1; cmd_cnt < cmd.length; cmd_cnt++)
     {
-      int grip_num = joint_num;
-      gripperAngle2Pos(angles[grip_num]);
-      print("gripper : " + angles[grip_num] + "\n");
+      if (cmd_cnt == cmd.length-1)
+      {
+        gripperAngle2Pos(float(cmd[cmd_cnt]));
+        println("gripper : " + cmd[cmd_cnt]);
+      }
+      else
+      {
+        joint_angle[cmd_cnt-1] = float(cmd[cmd_cnt]);
+        print("joint " + cmd_cnt + ": " + cmd[cmd_cnt] + "  ");
+      }
     }
-    else
-    {
-      joint_angle[joint_num] = angles[joint_num];
-      print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "  ");
-    }
+  }
+  else
+  {
+    println("Error");
   }
 }
 
@@ -270,6 +276,7 @@ class ChildApplet extends PApplet
   Knob joint1, joint2, joint3, joint4, gripper;
 
   float grip_angle;
+  boolean onoff_flag = false;
 
   public ChildApplet()
   {
@@ -279,7 +286,7 @@ class ChildApplet extends PApplet
 
   public void settings()
   {
-    size(400, 800);
+    size(400, 600);
     smooth();
   }
   public void setup()
@@ -314,7 +321,7 @@ class ChildApplet extends PApplet
 
     cp5.addToggle("Controller_OnOff")
        .setPosition(0,50)
-       .setSize(400,50)
+       .setSize(400,40)
        .setMode(Toggle.SWITCH)
        .setFont(createFont("arial",15))
        ;
@@ -322,8 +329,8 @@ class ChildApplet extends PApplet
     joint1 = cp5.addKnob("joint1")
              .setRange(-3.14,3.14)
              .setValue(0)
-             .setPosition(50,150)
-             .setRadius(60)
+             .setPosition(30,140)
+             .setRadius(50)
              .setDragDirection(Knob.HORIZONTAL)
              .setFont(createFont("arial",10))
              .setColorForeground(color(255))
@@ -334,8 +341,8 @@ class ChildApplet extends PApplet
     joint2 = cp5.addKnob("joint2")
              .setRange(-3.14,3.14)
              .setValue(0)
-             .setPosition(220,150)
-             .setRadius(60)
+             .setPosition(150,140)
+             .setRadius(50)
              .setDragDirection(Knob.HORIZONTAL)
              .setFont(createFont("arial",10))
              .setColorForeground(color(255))
@@ -346,8 +353,8 @@ class ChildApplet extends PApplet
     joint3 = cp5.addKnob("joint3")
              .setRange(-3.14,3.14)
              .setValue(0)
-             .setPosition(50,300)
-             .setRadius(60)
+             .setPosition(270,140)
+             .setRadius(50)
              .setDragDirection(Knob.HORIZONTAL)
              .setFont(createFont("arial",10))
              .setColorForeground(color(255))
@@ -358,8 +365,8 @@ class ChildApplet extends PApplet
     joint4 = cp5.addKnob("joint4")
              .setRange(-3.14,3.14)
              .setValue(0)
-             .setPosition(220,300)
-             .setRadius(60)
+             .setPosition(85,260)
+             .setRadius(50)
              .setDragDirection(Knob.HORIZONTAL)
              .setFont(createFont("arial",10))
              .setColorForeground(color(255))
@@ -369,9 +376,9 @@ class ChildApplet extends PApplet
 
     gripper = cp5.addKnob("gripper")
                 .setRange(0.0, 0.8)
-                .setValue(0.4)
-                .setPosition(135,440)
-                .setRadius(60)
+                .setValue(0.0)
+                .setPosition(210,260)
+                .setRadius(50)
                 .setDragDirection(Knob.HORIZONTAL)
                 .setFont(createFont("arial",10))
                 .setColorForeground(color(255))
@@ -379,22 +386,40 @@ class ChildApplet extends PApplet
                 .setColorActive(color(255,255,0))
                 ;
 
+    cp5.addButton("Origin")
+       .setValue(0)
+       .setPosition(0,350)
+       .setSize(80,40)
+       .setFont(createFont("arial",13))
+       .setColorForeground(color(150,150,0))
+       .setColorBackground(color(100, 160, 0))
+       ;
+
+    cp5.addButton("Basic")
+       .setValue(0)
+       .setPosition(320,350)
+       .setSize(80,40)
+       .setFont(createFont("arial",13))
+       .setColorForeground(color(150,150,0))
+       .setColorBackground(color(100, 160, 0))
+       ;
+
     cp5.addButton("Send_Joint_Angle")
        .setValue(0)
-       .setPosition(0,610)
+       .setPosition(0,400)
        .setSize(400,40)
        .setFont(createFont("arial",15))
        ;
 
     cp5.addButton("Set_Gripper")
        .setValue(0)
-       .setPosition(0,670)
+       .setPosition(0,460)
        .setSize(400,40)
        .setFont(createFont("arial",15))
        ;
 
     cp5.addToggle("Gripper_OnOff")
-       .setPosition(0,730)
+       .setPosition(0,520)
        .setSize(400,40)
        .setMode(Toggle.SWITCH)
        .setFont(createFont("arial",15))
@@ -413,8 +438,14 @@ class ChildApplet extends PApplet
 
   void Controller_OnOff(boolean flag)
   {
-    if (flag)
+    onoff_flag = flag;
+    if (onoff_flag)
     {
+      joint1.setValue(joint_angle[0]);
+      joint2.setValue(joint_angle[1]);
+      joint3.setValue(joint_angle[2]);
+      joint4.setValue(joint_angle[3]);
+
       opencr_port.write("ready" + '\n');
       println("OpenManipulator Chain Ready!!!");
     }
@@ -451,30 +482,103 @@ class ChildApplet extends PApplet
     gripperAngle2Pos(angle);
   }
 
+  public void Origin(int theValue)
+  {
+    if (onoff_flag)
+    {
+      joint_angle[0] = 0.0;
+      joint_angle[1] = 0.0;
+      joint_angle[2] = 0.0;
+      joint_angle[3] = 0.0;
+
+      joint1.setValue(joint_angle[0]);
+      joint2.setValue(joint_angle[1]);
+      joint3.setValue(joint_angle[2]);
+      joint4.setValue(joint_angle[3]);
+
+      opencr_port.write("joint"        + ',' +
+                        joint_angle[0] + ',' +
+                        joint_angle[1] + ',' +
+                        joint_angle[2] + ',' +
+                        joint_angle[3] + '\n');
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  public void Basic(int theValue)
+  {
+    if (onoff_flag)
+    {
+      joint_angle[0] = 0.0;
+      joint_angle[1] = 60.0  * PI/180.0;
+      joint_angle[2] = -20.0 * PI/180.0;
+      joint_angle[3] = -40.0 * PI/180.0;
+
+      joint1.setValue(joint_angle[0]);
+      joint2.setValue(joint_angle[1]);
+      joint3.setValue(joint_angle[2]);
+      joint4.setValue(joint_angle[3]);
+
+      opencr_port.write("joint"        + ',' +
+                        joint_angle[0] + ',' +
+                        joint_angle[1] + ',' +
+                        joint_angle[2] + ',' +
+                        joint_angle[3] + '\n');
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
   public void Send_Joint_Angle(int theValue)
   {
-    opencr_port.write("joint"        + ',' +
-                      joint_angle[0] + ',' +
-                      joint_angle[1] + ',' +
-                      joint_angle[2] + ',' +
-                      joint_angle[3] + '\n');
+    if (onoff_flag)
+    {
+      opencr_port.write("joint"        + ',' +
+                        joint_angle[0] + ',' +
+                        joint_angle[1] + ',' +
+                        joint_angle[2] + ',' +
+                        joint_angle[3] + '\n');
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
   }
 
   public void Set_Gripper(int theValue)
   {
-    opencr_port.write("gripper"  + ',' +
-                      grip_angle + '\n');
+    if (onoff_flag)
+    {
+      opencr_port.write("gripper"  + ',' +
+                        grip_angle + '\n');
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
   }
 
   void Gripper_OnOff(boolean flag)
   {
-    if (flag)
+    if (onoff_flag)
     {
-      opencr_port.write("on" + '\n');
+      if (flag)
+      {
+        opencr_port.write("on" + '\n');
+      }
+      else
+      {
+        opencr_port.write("off" + '\n');
+      }
     }
     else
     {
-      opencr_port.write("off" + '\n');
+      println("Please, Set On Controller");
     }
   }
 }

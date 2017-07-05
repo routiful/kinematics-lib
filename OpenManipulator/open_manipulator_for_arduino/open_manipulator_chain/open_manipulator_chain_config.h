@@ -44,12 +44,14 @@
 const float grip_on  = 0.7;
 const float grip_off = 0.0;
 
-float mov_time             = 2.0;
+float mov_time             = 3.0;
 const float control_period = 0.008;
 
 bool moving = false;
 bool comm   = false;
 
+float link_angle[LINK_NUM];
+float motor_angle[LINK_NUM];
 Eigen::MatrixXf joint_tra;
 
 HardwareTimer control_timer(TIMER_CH1);
@@ -84,7 +86,6 @@ void getDynamixelPosition();
 
 // PROCESSING
 void sendJointDataToProcessing();
-void sendInitJointDataToProcessing();
 void getDataFromProcessing(bool &comm);
 
 void getLinkAngle(float* angle);

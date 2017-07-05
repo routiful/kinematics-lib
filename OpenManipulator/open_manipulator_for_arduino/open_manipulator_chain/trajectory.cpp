@@ -23,9 +23,9 @@ Trajectory::Trajectory(){}
 
 Trajectory::~Trajectory(){}
 
-Eigen::MatrixXf Trajectory::minimumJerk(Property* start, Property* end, int target_num, float control_period, float mov_time)
+Eigen::MatrixXf Trajectory::minimumJerk(Property* start, Property* end, uint8_t target_num, float control_period, float mov_time)
 {
-  int step_time = mov_time/control_period + 1;
+  uint16_t step_time = mov_time/control_period + 1;
 
   Eigen::MatrixXf trajectory(step_time, target_num);
 

@@ -18,9 +18,9 @@
 
 #include "open_manipulator_chain_config.h"
 
-#define DEBUG
+// #define DEBUG
 // #define DYNAMIXEL
-// #define SIMULATION
+#define SIMULATION
 
 /*******************************************************************************
 * Setup
@@ -92,6 +92,7 @@ void getDataFromProcessing(bool &comm)
 #ifdef DYNAMIXEL
       initMotorTorque(true);
       getDynamixelPosition();
+      getMotorAngle(motor_angle);
       sendInitJointDataToProcessing();
 #endif
       comm = true;
@@ -156,7 +157,7 @@ void getDataFromProcessing(bool &comm)
     }
     else
     {
-      comm = comm;
+      Serial.println("Error");
     }
   }
 }
@@ -166,8 +167,8 @@ void getDataFromProcessing(bool &comm)
 *******************************************************************************/
 void handler_control()
 {
-  uint8_t step_time = mov_time/control_period + 1;
-  static uint32_t cnt = 0;
+  uint16_t step_time = mov_time/control_period + 1;
+  static uint16_t cnt = 0;
 
   if (moving && comm)
   {
@@ -191,10 +192,12 @@ void handler_control()
     }
 #ifdef SIMULATION
     sendJointDataToProcessing();
+    getLinkAngle(link_angle);
 #endif
 
 #ifdef DEBUG
     sendJointDataToProcessing();
+    getLinkAngle(link_angle);
 #endif
 
 #ifdef DYNAMIXEL
@@ -209,29 +212,8 @@ void handler_control()
 *******************************************************************************/
 void sendJointDataToProcessing()
 {
-  float angle[LINK_NUM];
-
-  Serial.print(link[JOINT1].q_);
+  Serial.print("angle");
   Serial.print(",");
-  Serial.print(link[JOINT2].q_);
-  Serial.print(",");
-  Serial.print(link[JOINT3].q_);
-  Serial.print(",");
-  Serial.print(link[JOINT4].q_);
-  Serial.print(",");
-  Serial.println(link[END].q_);
-
-  getLinkAngle(angle);
-}
-
-/*******************************************************************************
-* Send Joint Data to Processing
-*******************************************************************************/
-void sendInitJointDataToProcessing()
-{
-  float angle[LINK_NUM];
-  getMotorAngle(angle);
-
   Serial.print(link[JOINT1].q_);
   Serial.print(",");
   Serial.print(link[JOINT2].q_);
@@ -377,7 +359,7 @@ void getLinkAngle(float* angle)
 {
   for (int num = BASE; num <= END; num++)
   {
-    angle[num] = link[num].q_;
+    angle[num]                  = link[num].q_;
     motor[num].present_position = angle[num];
   }
 }
@@ -389,8 +371,8 @@ void getMotorAngle(float* angle)
 {
   for (int num = BASE; num <= END; num++)
   {
-    link[num].q_ = motor[num].present_position;
-    angle[num] = link[num].q_;
+    angle[num]   = motor[num].present_position;
+    link[num].q_ = angle[num];
   }
 }
 
