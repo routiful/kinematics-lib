@@ -23,6 +23,9 @@ float model_rot_x, model_rot_z, model_trans_x, model_trans_y, model_scale_factor
 // Serial variable
 Serial opencr_port;
 
+int ball_num = 0;
+float[][] ball_pos = new float[7][4];
+
 // Angle variable
 float[] joint_angle = new float[4];
 float[] gripper_pos = new float[2];
@@ -52,6 +55,8 @@ void draw()
   drawWorldFrame();
 
   drawManipulator();
+
+  drawBall();
 }
 
 void connectOpenCR(int port_num)
@@ -85,6 +90,10 @@ void serialEvent(Serial opencr_port)
         print("joint " + cmd_cnt + ": " + cmd[cmd_cnt] + "  ");
       }
     }
+  }
+  else if (cmd[0].equals("end"))
+  {
+    ball_num = -1;
   }
   else
   {
@@ -135,6 +144,52 @@ void setWindow()
   rotateZ(radians(140));
 }
 
+void drawBall()
+{
+  if (ball_num == -1)
+    return;
+
+  for (int i=0; i<ball_num; i++)
+  {
+    setBall(i);
+  }
+}
+
+void setBall(int num)
+{
+  pushMatrix();
+  translate(-model_trans_x, -model_trans_y, 0);
+  rotateX(model_rot_x);
+  rotateZ(model_rot_z);
+
+  translate(12, 0, 36);
+  rotateZ(ball_pos[num][0]);
+
+  translate(0, 2, 40);
+  rotateY(ball_pos[num][1]);
+
+  translate(22, 0, 122);
+  rotateY(ball_pos[num][2]);
+
+  translate(124, 0, 0);
+  rotateY(ball_pos[num][3]);
+
+  translate(69, 0, 0);
+  drawSphere(30,0,0,
+             255,255,255,
+             20);
+  popMatrix();
+}
+
+void drawSphere(int x, int y, int z, int r, int g, int b, int size)
+{
+  pushMatrix();
+  translate(x,y,z);
+  stroke(r,g,b);
+  sphere(size);
+  popMatrix();
+}
+
 void drawTitle()
 {
   pushMatrix();
@@ -182,6 +237,7 @@ void drawManipulator()
   drawLocalFrame();
 
   translate(69, 0, 0);
+  drawSphere(30,0,0,255,255,0,20);
   translate(0, gripper_pos[0], 0);
   shape(gripper);
   drawLocalFrame();
@@ -267,6 +323,9 @@ void keyPressed()
   else if (key == 'i') model_trans_x = model_trans_y = model_scale_factor = model_rot_z = model_rot_x = 0;
 }
 
+/*******************************************************************************
+* Controller Window
+*******************************************************************************/
 class ChildApplet extends PApplet
 {
   ControlP5 cp5;
@@ -277,6 +336,7 @@ class ChildApplet extends PApplet
 
   float grip_angle;
   boolean onoff_flag = false;
+  int motion_num = 0;
 
   public ChildApplet()
   {
@@ -425,10 +485,49 @@ class ChildApplet extends PApplet
        .setFont(createFont("arial",15))
        ;
 
+    cp5.addButton("Torque_Off")
+       .setValue(0)
+       .setPosition(0,130)
+       .setSize(400,40)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.addButton("Make_Joint_Pose")
+       .setValue(0)
+       .setPosition(0,190)
+       .setSize(400,40)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.addToggle("Make_Gripper_Pose")
+       .setPosition(0,250)
+       .setSize(400,40)
+       .setMode(Toggle.SWITCH)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.addButton("Motion_Start")
+       .setValue(0)
+       .setPosition(0,330)
+       .setSize(400,40)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.addToggle("Motion_Repeat")
+       .setPosition(0,390)
+       .setSize(400,40)
+       .setMode(Toggle.SWITCH)
+       .setFont(createFont("arial",15))
+       ;
+
     cp5.getController("label").moveTo("global");
     cp5.getController("Controller_OnOff").moveTo("global");
 
-    // cp5.getController("sliderValue").moveTo("extra");
+    cp5.getController("Torque_Off").moveTo("Application");
+    cp5.getController("Make_Joint_Pose").moveTo("Application");
+    cp5.getController("Make_Gripper_Pose").moveTo("Application");
+    cp5.getController("Motion_Start").moveTo("Application");
+    cp5.getController("Motion_Repeat").moveTo("Application");
   }
 
   public void draw()
@@ -451,7 +550,7 @@ class ChildApplet extends PApplet
     }
     else
     {
-      opencr_port.write("stop" + '\n');
+      opencr_port.write("end" + '\n');
       println("OpenManipulator Chain End...");
     }
   }
@@ -574,6 +673,99 @@ class ChildApplet extends PApplet
       else
       {
         opencr_port.write("off" + '\n');
+      }
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  public void Torque_Off(int theValue)
+  {
+    if (onoff_flag)
+    {
+      opencr_port.write("loose" + '\n');
+      println("Torque Disable of OpenManipulator");
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  public void Make_Joint_Pose(int theValue)
+  {
+    if (onoff_flag)
+    {
+      opencr_port.write("get"      + ',' +
+                        motion_num + '\n');
+
+      motion_num++;
+
+      for (int i=0; i<4; i++)
+      {
+        ball_pos[ball_num][i] = -joint_angle[i];
+      }
+      ball_num++;
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  void Make_Gripper_Pose(boolean flag)
+  {
+    int grip_on  = -1;
+    int grip_off = -2;
+
+    if (onoff_flag)
+    {
+      if (flag)
+      {
+        opencr_port.write("get"    + ',' +
+                          grip_on  + '\n');
+      }
+      else
+      {
+        opencr_port.write("get"     + ',' +
+                          grip_off  + '\n');
+      }
+      motion_num++;
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  public void Motion_Start(int theValue)
+  {
+    if (onoff_flag)
+    {
+      opencr_port.write("once" + '\n');
+      println("Motion Start!!!");
+
+      motion_num = 0;
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  void Motion_Repeat(boolean flag)
+  {
+    if (onoff_flag)
+    {
+      if (flag)
+      {
+        opencr_port.write("repeat" + '\n');
+      }
+      else
+      {
+        opencr_port.write("stop" + '\n');
       }
     }
     else

@@ -34,6 +34,8 @@
 #define GRIP_NUM            1
 #define LINK_NUM            6
 
+#define STORAGE 7
+
 #define BASE    0
 #define JOINT1  1
 #define JOINT2  2
@@ -47,17 +49,19 @@ const float grip_off = 0.0;
 float mov_time             = 3.0;
 const float control_period = 0.008;
 
-bool moving = false;
-bool comm   = false;
+bool moving        = false;
+bool comm          = false;
+bool motion        = false;
+bool repeat        = false;
+uint8_t motion_num = 0;
 
 String cmd[5];
 
 float link_angle[LINK_NUM];
 float motor_angle[LINK_NUM];
+float angle_storage[STORAGE][LINK_NUM];
 
 Eigen::MatrixXf joint_tra;
-
-HardwareTimer control_timer(TIMER_CH1);
 
 open_manipulator::Motor        motor[LINK_NUM];
 open_manipulator::Link         link[LINK_NUM];
@@ -67,12 +71,13 @@ open_manipulator::Property     start_prop[LINK_NUM];
 open_manipulator::Property     end_prop[LINK_NUM];
 open_manipulator::Trajectory*  trajectory;
 
+HardwareTimer control_timer(TIMER_CH1);
+
 void initLinkAndMotor();
 void initTimer();
 void initKinematics();
 void initTrajectory();
 void initMotorDriver(bool torque);
-void initMotorTorque(bool onoff);
 
 void establishContactToProcessing();
 
@@ -80,6 +85,8 @@ void setJointPropPos(float* joint_pos);
 void setGripperPropPos(float gripper);
 
 void setTimer(bool onoff);
+void setMotorTorque(bool onoff);
+void setMotion(bool onoff);
 void setFK(open_manipulator::Link* link, int8_t me);
 void setIK(open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose);
 

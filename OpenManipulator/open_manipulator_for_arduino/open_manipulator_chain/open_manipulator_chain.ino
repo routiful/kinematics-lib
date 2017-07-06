@@ -59,6 +59,7 @@ void setup()
 void loop()
 {
   getDataFromProcessing(comm);
+  setMotion(motion);
   showLedStatus();
 }
 
@@ -76,18 +77,10 @@ void getDataFromProcessing(bool &comm)
 
     split(get, ',', cmd);
 
-#ifdef DEBUG
-    Serial.println(cmd[0]);
-    Serial.println(cmd[1].toFloat());
-    Serial.println(cmd[2].toFloat());
-    Serial.println(cmd[3].toFloat());
-    Serial.println(cmd[4].toFloat());
-#endif
-
     if (cmd[0] == "ready")
     {
 #ifdef DYNAMIXEL
-      initMotorTorque(true);
+      setMotorTorque(true);
       getDynamixelPosition();
       getMotorAngle(motor_angle);
       sendJointDataToProcessing();
@@ -95,10 +88,10 @@ void getDataFromProcessing(bool &comm)
       setTimer(true);
       comm = true;
     }
-    else if (cmd[0] == "stop")
+    else if (cmd[0] == "end")
     {
 #ifdef DYNAMIXEL
-      initMotorTorque(false);
+      setMotorTorque(false);
 #endif
       comm = false;
     }
@@ -152,6 +145,72 @@ void getDataFromProcessing(bool &comm)
 
       moving = true;
     }
+#ifdef DYNAMIXEL
+    else if (cmd[0] == "loose")
+    {
+      setMotorTorque(false);
+    }
+    else if (cmd[0] == "get")
+    {
+      if (cmd[1].toInt() == -1)
+      {
+        angle_storage[motion_num][0] = -1;
+        motion_num++;
+      }
+      else if (cmd[1].toInt() == -2)
+      {
+        angle_storage[motion_num][0] = -2;
+        motion_num++;
+      }
+      else if (cmd[1].toInt() < STORAGE)
+      {
+        getDynamixelPosition();
+        getMotorAngle(motor_angle);
+        sendJointDataToProcessing();
+
+        for (int i = 0; i < LINK_NUM; i++)
+        {
+          angle_storage[motion_num][i] = motor[i].present_position;
+        }
+        motion_num++;
+      }
+      else
+      {
+        Serial.println("Overflow");
+      }
+    }
+    else if (cmd[0] == "once")
+    {
+      setMotorTorque(true);
+
+      getDynamixelPosition();
+      getMotorAngle(motor_angle);
+      sendJointDataToProcessing();
+
+      motion = true;
+    }
+    else if (cmd[0] == "repeat")
+    {
+      setMotorTorque(true);
+
+      getDynamixelPosition();
+      getMotorAngle(motor_angle);
+      sendJointDataToProcessing();
+
+      motion = true;
+      repeat = true;
+    }
+    else if (cmd[0] == "stop")
+    {
+      for (int i=0; i<STORAGE; i++)
+      {
+        angle_storage[i][0] = 0;
+      }
+      motion     = false;
+      repeat     = false;
+      motion_num = 0;
+    }
+#endif
     else
     {
       Serial.println("Error");
@@ -203,6 +262,82 @@ void handler_control()
     setJointDataToDynamixel();
     setGripperDataToDynamixel();
 #endif
+  }
+}
+
+void setMotion(bool onoff)
+{
+  static uint8_t motion_cnt = 0;
+
+  if (onoff)
+  {
+    if (moving)
+      return;
+
+    if (motion_cnt >= motion_num)
+    {
+      if (repeat)
+      {
+        motion_cnt = 0;
+      }
+      else
+      {
+        for (int i=0; i<STORAGE; i++)
+        {
+          angle_storage[i][0] = 0;
+        }
+        motion     = false;
+        motion_cnt = 0;
+        motion_num = 0;
+        Serial.println("end" + String(","));
+        return;
+      }
+    }
+
+    if (angle_storage[motion_cnt][0] == -1)
+    {
+      setGripperPropPos(grip_on);
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          LINK_NUM,
+                                          control_period,
+                                          mov_time);
+
+      moving = true;
+      motion_cnt++;
+    }
+    else if (angle_storage[motion_cnt][0] == -2)
+    {
+      setGripperPropPos(grip_off);
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          LINK_NUM,
+                                          control_period,
+                                          mov_time);
+      moving = true;
+      motion_cnt++;
+    }
+    else
+    {
+      float joint_pos[LINK_NUM] = {0.0,
+                                   angle_storage[motion_cnt][JOINT1],
+                                   angle_storage[motion_cnt][JOINT2],
+                                   angle_storage[motion_cnt][JOINT3],
+                                   angle_storage[motion_cnt][JOINT4],
+                                   0.0};
+      setJointPropPos(joint_pos);
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          LINK_NUM,
+                                          control_period,
+                                          mov_time);
+      moving = true;
+      motion_cnt++;
+    }
+  }
+  else
+  {
+    motion_cnt = 0;
   }
 }
 
@@ -551,7 +686,7 @@ void initLinkAndMotor()
   link[END].dq_                         = 0.0;
   link[END].ddq_                        = 0.0;
   link[END].a_                          = Eigen::Vector3f::Zero();
-  link[END].b_                          << 0.070, 0, 0;
+  link[END].b_                          << 0.100, 0, 0;
   link[END].v_                          = Eigen::Vector3f::Zero();
   link[END].w_                          = Eigen::Vector3f::Zero();
 
@@ -585,12 +720,12 @@ void initMotorDriver(bool torque)
   motor_driver = new open_manipulator::MotorDriver(PROTOCOL_VERSION, BAUE_RATE);
 
   if (motor_driver->init(motor, JOINT_NUM+GRIP_NUM))
-    initMotorTorque(torque);
+    setMotorTorque(torque);
   else
     return;
 }
 
-void initMotorTorque(bool onoff)
+void setMotorTorque(bool onoff)
 {
   motor_driver->setTorque(onoff);
 }
