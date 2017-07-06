@@ -206,7 +206,10 @@ bool MotorDriver::readPosition(Motor* get_motor)
   // Syncread present position
   dxl_comm_result = groupSyncReadPosition_->txRxPacket();
   if (dxl_comm_result != COMM_SUCCESS)
+  {
+    Serial.print("comm failed");
     packetHandler_->printTxRxResult(dxl_comm_result);
+  }
 
   for (int num = 0; num <= motor_num_; num++)
   {

@@ -41,7 +41,7 @@
 #define JOINT4  4
 #define END     5
 
-const float grip_on  = 0.7;
+const float grip_on  = 1.3;
 const float grip_off = 0.0;
 
 float mov_time             = 3.0;
@@ -76,6 +76,7 @@ void establishContactToProcessing();
 void setJointPropPos(float* joint_pos);
 void setGripperPropPos(float gripper);
 
+void setTimer(bool onoff);
 void setFK(open_manipulator::Link* link, int8_t me);
 void setIK(open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose);
 

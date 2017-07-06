@@ -19,7 +19,7 @@
 #include "open_manipulator_chain_config.h"
 
 // #define DEBUG
-// #define DYNAMIXEL
+#define DYNAMIXEL
 #define SIMULATION
 
 /*******************************************************************************
@@ -40,8 +40,7 @@ void setup()
 #ifdef DYNAMIXEL
   initMotorDriver(false);
 #endif
-
-  initTimer();
+  // initTimer();
 
 #ifdef SIMULATION
   establishContactToProcessing();
@@ -59,6 +58,13 @@ void setup()
 *******************************************************************************/
 void loop()
 {
+  static uint32_t tTime = millis();
+  if (millis()-tTime >= 8)
+  {
+    tTime = millis();
+    handler_control();
+  }
+
   getDataFromProcessing(comm);
 
   showLedStatus();
@@ -70,7 +76,7 @@ void loop()
 void getDataFromProcessing(bool &comm)
 {
   String get = "";
-  String cmd[50];
+  String cmd[5];
 
   if (Serial.available())
   {
@@ -93,8 +99,9 @@ void getDataFromProcessing(bool &comm)
       initMotorTorque(true);
       getDynamixelPosition();
       getMotorAngle(motor_angle);
-      sendInitJointDataToProcessing();
+      sendJointDataToProcessing();
 #endif
+      setTimer(true);
       comm = true;
     }
     else if (cmd[0] == "stop")
@@ -118,7 +125,6 @@ void getDataFromProcessing(bool &comm)
                                           LINK_NUM,
                                           control_period,
                                           mov_time);
-
       moving = true;
     }
     else if (cmd[0] == "gripper")
@@ -132,6 +138,7 @@ void getDataFromProcessing(bool &comm)
                                           mov_time);
 
       moving = true;
+      setTimer(true);
     }
     else if (cmd[0] == "on")
     {
@@ -143,6 +150,7 @@ void getDataFromProcessing(bool &comm)
                                           mov_time);
 
       moving = true;
+      setTimer(true);
     }
     else if (cmd[0] == "off")
     {
@@ -175,8 +183,9 @@ void handler_control()
     if (cnt >= step_time)
     {
 #ifdef DYNAMIXEL
-      getDynamixelPosition();
+      // getDynamixelPosition();
 #endif
+      getLinkAngle(link_angle);
       kinematics->forward(link, BASE);
 
       moving = false;
@@ -192,12 +201,12 @@ void handler_control()
     }
 #ifdef SIMULATION
     sendJointDataToProcessing();
-    getLinkAngle(link_angle);
+
 #endif
 
 #ifdef DEBUG
-    sendJointDataToProcessing();
-    getLinkAngle(link_angle);
+    // sendJointDataToProcessing();
+    // getLinkAngle(link_angle);
 #endif
 
 #ifdef DYNAMIXEL
@@ -341,7 +350,17 @@ void initTimer()
   control_timer.stop();
   control_timer.setPeriod(CONTROL_RATE);
   control_timer.attachInterrupt(handler_control);
-  control_timer.start();
+}
+
+/*******************************************************************************
+* Set Timer
+*******************************************************************************/
+void setTimer(bool onoff)
+{
+  if (onoff)
+    control_timer.start();
+  else
+    control_timer.stop();
 }
 
 /*******************************************************************************

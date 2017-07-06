@@ -41,7 +41,7 @@ void setup()
   initShape();
   initView();
 
-  connectOpenCR(7);
+  connectOpenCR(0);
 }
 
 void draw()
@@ -245,7 +245,7 @@ void gripperOff()
 
 void gripperAngle2Pos(float angle)
 {
-  float angle2pos = map(angle, 0.0, 1.57, -45.0, 0.0);
+  float angle2pos = map(angle, 0.0, 3.5, -45.0, 0.0);
   gripper_pos[0] = angle2pos;
   gripper_pos[1] = -gripper_pos[0] - angle2pos;
 }
@@ -258,10 +258,10 @@ void mouseDragged()
 
 void keyPressed()
 {
-  if      (key == 'a') model_trans_x -= 50;
-  else if (key == 'd') model_trans_x += 50;
-  else if (key == 's') model_trans_y += 50;
-  else if (key == 'w') model_trans_y -= 50;
+  if      (key == 'a') model_trans_x      -= 50;
+  else if (key == 'd') model_trans_x      += 50;
+  else if (key == 's') model_trans_y      += 50;
+  else if (key == 'w') model_trans_y      -= 50;
   else if (key == 'q') model_scale_factor += 0.5;
   else if (key == 'e') model_scale_factor -= 0.5;
   else if (key == 'i') model_trans_x = model_trans_y = model_scale_factor = model_rot_z = model_rot_x = 0;
@@ -375,7 +375,7 @@ class ChildApplet extends PApplet
              ;
 
     gripper = cp5.addKnob("gripper")
-                .setRange(0.0, 0.8)
+                .setRange(0.0, 1.5)
                 .setValue(0.0)
                 .setPosition(210,260)
                 .setRadius(50)
