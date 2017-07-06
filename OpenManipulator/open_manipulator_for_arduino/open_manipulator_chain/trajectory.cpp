@@ -65,10 +65,7 @@ Eigen::MatrixXf Trajectory::minimumJerk(Property* start, Property* end, uint8_t 
                                a[3]*pow(control_period*cnt,3) +
                                a[4]*pow(control_period*cnt,4) +
                                a[5]*pow(control_period*cnt,5);
-
-     Serial.print(single_trajectory(cnt));
     }
-    Serial.println("");
     trajectory.col(num) = single_trajectory;
   }
 

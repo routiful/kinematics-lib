@@ -50,8 +50,11 @@ const float control_period = 0.008;
 bool moving = false;
 bool comm   = false;
 
+String cmd[5];
+
 float link_angle[LINK_NUM];
 float motor_angle[LINK_NUM];
+
 Eigen::MatrixXf joint_tra;
 
 HardwareTimer control_timer(TIMER_CH1);
