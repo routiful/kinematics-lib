@@ -30,7 +30,7 @@ import controlP5.*;
 import processing.serial.*;
 
 // Shape variables
-PShape link1, link2, link3;
+PShape link1, link2, link3, link4;
 
 // Model pose
 float model_rot_x, model_rot_z, model_trans_x, model_trans_y, model_scale_factor;
@@ -61,7 +61,7 @@ void setup()
   initShape();
   initView();
 
-  connectOpenCR(0); // It is depend on laptop enviroments.
+  //connectOpenCR(0); // It is depend on laptop enviroments.
 }
 
 /*******************************************************************************
@@ -149,6 +149,7 @@ void initShape()
   link1       = loadShape("meshes/scara/link1.obj");
   link2       = loadShape("meshes/scara/link2.obj");
   link3       = loadShape("meshes/scara/link3.obj");
+  link4       = loadShape("meshes/scara/link4.obj");
 
   setJointAngle(0, 0);
   gripperOn();
@@ -165,8 +166,8 @@ void setWindow()
 
   translate(width/2, height/2, 0);
 
-  rotateX(radians(90));
-  rotateZ(radians(140));
+  rotateX(radians(0));
+  rotateZ(radians(0));
 }
 
 /*******************************************************************************
@@ -195,6 +196,9 @@ void drawManipulator()
   scale(1 + model_scale_factor);
 
   pushMatrix();
+  translate(-model_trans_x, -model_trans_y, 0);
+  rotateX(model_rot_x);
+  rotateZ(model_rot_z);
   shape(link1);
   drawLocalFrame();
 
@@ -207,8 +211,13 @@ void drawManipulator()
   rotateZ(-joint_angle[1]);
   shape(link3);
   drawLocalFrame();
-
-  translate(0, 104, 0);
+  
+  translate(0, 83, 0);
+  rotateZ(-gripper_angle);
+  shape(link4);
+  drawLocalFrame();
+  
+  translate(0, 22, 0);
   drawLocalFrame();
 
   popMatrix();
