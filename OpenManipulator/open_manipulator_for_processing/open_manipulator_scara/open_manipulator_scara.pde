@@ -1,72 +1,129 @@
-/**
- * simulation.
- *
- * this code receives data from pose_controller.ino
- * to show how to change pose of objects.
-*/
+/*******************************************************************************
+* Copyright 2016 ROBOTIS CO., LTD.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*******************************************************************************/
 
+/* Authors: Darby Lim */
+
+/**
+ * this code is compatible with open_manipulator_scara.ino
+**/
+
+// Multiple Window
+ChildApplet child;
+
+// Control Interface
+import controlP5.*;
+
+// Init serial
 import processing.serial.*;
 
-// Shape variable
+// Shape variables
 PShape link1, link2, link3;
+
 // Model pose
 float model_rot_x, model_rot_z, model_trans_x, model_trans_y, model_scale_factor;
+
 // Serial variable
 Serial opencr_port;
-// Angle variable
-float[] joint_angle = new float[4];
-float[] gripper_angle = new float[2];
-// Simulation frequency
-static int tTime;
-int update_period = 250;
 
-void setup()
+// Angle variable
+float[] joint_angle   = new float[2];
+float gripper_angle   = 0.0;
+
+/*******************************************************************************
+* Setting window size
+*******************************************************************************/
+void settings()
 {
   size(600, 600, OPENGL);
-  smooth();
+}
+
+/*******************************************************************************
+* Setup
+*******************************************************************************/
+void setup()
+{
+  surface.setTitle("OpenManipulator Chain");
+  child = new ChildApplet();
 
   initShape();
   initView();
-  
-  //connectOpenCR(0);
+
+  connectOpenCR(0); // It is depend on laptop enviroments.
 }
 
+/*******************************************************************************
+* Draw (loop function)
+*******************************************************************************/
 void draw()
 {
-  lights();
-  smooth();
-  background(30);  
-  
-  translate(width/2 + model_trans_x, height/2 + model_trans_y, 0);
+  setWindow();
 
-  rotateX(radians(90) + model_rot_x);
-  rotateZ(model_rot_z + radians(140));
-  
+  drawTitle();
   drawWorldFrame();
 
-  if ((millis()-tTime) >= (1000 / update_period))
+  drawManipulator();
+}
+
+/*******************************************************************************
+* Connect OpenCR
+*******************************************************************************/
+void connectOpenCR(int port_num)
+{
+  printArray(Serial.list());
+
+  String port_name = Serial.list()[port_num];
+  opencr_port = new Serial(this, port_name, 57600);
+  opencr_port.bufferUntil('\n');
+}
+
+/*******************************************************************************
+* Serial Interrupt
+*******************************************************************************/
+void serialEvent(Serial opencr_port)
+{
+  String opencr_string = opencr_port.readStringUntil('\n');
+  opencr_string = trim(opencr_string);
+
+  String[] cmd = split(opencr_string, ',');
+
+  if (cmd[0].equals("angle"))
   {
-    drawManipulator();
-    tTime = millis();
+    for (int cmd_cnt = 1; cmd_cnt < cmd.length; cmd_cnt++)
+    {
+      if (cmd_cnt == cmd.length-1)
+      {
+        gripper_angle = float(cmd[cmd_cnt]);
+        println("gripper : " + cmd[cmd_cnt]);
+      }
+      else
+      {
+        joint_angle[cmd_cnt-1] = float(cmd[cmd_cnt]);
+        print("joint " + cmd_cnt + ": " + cmd[cmd_cnt] + "  ");
+      }
+    }
+  }
+  else
+  {
+    println("Error");
   }
 }
 
-void mouseDragged()
-{
-    model_rot_z -= (mouseX - pmouseX) * 0.01;
-    model_rot_x -= (mouseY - pmouseY) * 0.01;
-}
-
-void keyPressed() 
-{
-  if (key == 'a') model_trans_x -= 50;
-  else if (key == 'd') model_trans_x += 50;
-  else if (key == 's') model_trans_y += 50;
-  else if (key == 'w') model_trans_y -= 50;
-  else if (key == 'r') model_scale_factor += 0.5;
-  else if (key == 'f') model_scale_factor -= 0.5;
-}
-
+/*******************************************************************************
+* Init viewpoint and camera
+*******************************************************************************/
 void initView()
 {
   float camera_y = height/2.0;
@@ -84,49 +141,55 @@ void initView()
          0, 1, 0);
 }
 
+/*******************************************************************************
+* Get shape
+*******************************************************************************/
 void initShape()
 {
-  link1 = loadShape("meshes/scara/link1.obj");
-  link2 = loadShape("meshes/scara/link2.obj");
-  link3 = loadShape("meshes/scara/link3.obj");
+  link1       = loadShape("meshes/scara/link1.obj");
+  link2       = loadShape("meshes/scara/link2.obj");
+  link3       = loadShape("meshes/scara/link3.obj");
 
-  setJointAngle(0, 0, 0, 0);
+  setJointAngle(0, 0);
+  gripperOn();
 }
 
-void connectOpenCR(int port_num)
+/*******************************************************************************
+* Set window characteristic
+*******************************************************************************/
+void setWindow()
 {
-  printArray(Serial.list());
+  lights();
+  smooth();
+  background(30);
 
-  String port_name = Serial.list()[port_num];
-  opencr_port = new Serial(this, port_name, 57600);
-  opencr_port.bufferUntil('\n');
-  
-  opencr_port.write("ready");
+  translate(width/2, height/2, 0);
+
+  rotateX(radians(90));
+  rotateZ(radians(140));
 }
 
-void serialEvent(Serial opencr_port)
+/*******************************************************************************
+* Draw title
+*******************************************************************************/
+void drawTitle()
 {
-  String opencr_string = opencr_port.readStringUntil('\n');
-  opencr_string = trim(opencr_string);
-
-  float[] angles = float(split(opencr_string, ','));
-
-  for (int joint_num = 0; joint_num < angles.length; joint_num++)
-  {
-    if (joint_num == angles.length-1)
-    {
-      gripper_angle[0] = angles[joint_num];
-      gripper_angle[1] = -gripper_angle[0] - gripper_angle[0];
-      print("gripper : " + angles[joint_num] + "\n");
-    }
-    else
-    {
-      joint_angle[joint_num] = angles[joint_num];
-      print("joint " + (joint_num+1)  + ": " + angles[joint_num] + "\t");
-    }
-  }
+  pushMatrix();
+  rotateX(radians(0));
+  rotateZ(radians(180));
+  textSize(60);
+  fill(255,204,102);
+  text("OpenManipulator SCARA", -450,75,0);
+  textSize(20);
+  fill(102,255,255);
+  text("Press 'A','D','W','S'", -450,120,0);
+  text("And   'Q','E'",         -450,150,0);
+  popMatrix();
 }
 
+/*******************************************************************************
+* Draw manipulator
+*******************************************************************************/
 void drawManipulator()
 {
   scale(1 + model_scale_factor);
@@ -144,62 +207,351 @@ void drawManipulator()
   rotateZ(-joint_angle[1]);
   shape(link3);
   drawLocalFrame();
-  
+
+  translate(0, 104, 0);
+  drawLocalFrame();
+
   popMatrix();
 }
 
+/*******************************************************************************
+* Draw world frame
+*******************************************************************************/
 void drawWorldFrame()
 {
   strokeWeight(10);
   stroke(255, 0, 0, 100);
   line(0, 0 ,0 , 200, 0, 0);
-  
+
   strokeWeight(10);
   stroke(0, 255, 0, 100);
   line(0, 0, 0, 0, 200, 0);
-  
+
   stroke(0, 0, 255, 100);
   strokeWeight(10);
   line(0, 0, 0, 0, 0, 200);
 }
 
+/*******************************************************************************
+* Draw local frame
+*******************************************************************************/
 void drawLocalFrame()
 {
   strokeWeight(10);
   stroke(255, 0, 0, 100);
   line(0, 0 ,0 , 100, 0, 0);
-  
+
   strokeWeight(10);
   stroke(0, 255, 0, 100);
   line(0, 0, 0, 0, 100, 0);
-  
+
   stroke(0, 0, 255, 100);
   strokeWeight(10);
   line(0, 0, 0, 0, 0, 100);
 }
 
-void setJointAngle(float angle1, float angle2, float angle3, float angle4)
+/*******************************************************************************
+* Set joint angle
+*******************************************************************************/
+void setJointAngle(float angle1, float angle2)
 {
   joint_angle[0] = angle1;
   joint_angle[1] = angle2;
-  joint_angle[2] = angle3;
-  joint_angle[3] = angle4;
 }
 
+/*******************************************************************************
+* Gripper on
+*******************************************************************************/
 void gripperOn()
 {
-  gripper_angle[0] = -20;
-  gripper_angle[1] = -gripper_angle[0] + 20;
+  gripper_angle = 0.0;
 }
 
+/*******************************************************************************
+* Gripper off
+*******************************************************************************/
 void gripperOff()
 {
-  gripper_angle[0] = -40;
-  gripper_angle[1] = -gripper_angle[0] + 44;
+  gripper_angle = 1.0;
 }
 
-void gripperJointAngle(float angle)
+/*******************************************************************************
+* Mouse drag event
+*******************************************************************************/
+void mouseDragged()
 {
-  gripper_angle[0] = angle;
-  gripper_angle[1] = -gripper_angle[0] - angle;
+  model_rot_z -= (mouseX - pmouseX) * 0.01;
+  model_rot_x -= (mouseY - pmouseY) * 0.01;
+}
+
+/*******************************************************************************
+* Key press event
+*******************************************************************************/
+void keyPressed()
+{
+  if      (key == 'a') model_trans_x      -= 50;
+  else if (key == 'd') model_trans_x      += 50;
+  else if (key == 's') model_trans_y      += 50;
+  else if (key == 'w') model_trans_y      -= 50;
+  else if (key == 'q') model_scale_factor += 0.5;
+  else if (key == 'e') model_scale_factor -= 0.5;
+  else if (key == 'i') model_trans_x = model_trans_y = model_scale_factor = model_rot_z = model_rot_x = 0;
+}
+
+/*******************************************************************************
+* Controller Window
+*******************************************************************************/
+class ChildApplet extends PApplet
+{
+  ControlP5 cp5;
+
+  Textlabel myTextlabelA;
+
+  Knob joint1, joint2, gripper;
+
+  boolean onoff_flag = false;
+
+  public ChildApplet()
+  {
+    super();
+    PApplet.runSketch(new String[]{this.getClass().getName()}, this);
+  }
+
+  public void settings()
+  {
+    size(400, 600);
+    smooth();
+  }
+  public void setup()
+  {
+    surface.setTitle("Control Interface");
+
+    cp5 = new ControlP5(this);
+
+    cp5.addTab("")
+       .setColorBackground(color(0, 160, 100))
+       .setColorLabel(color(255))
+       .setColorActive(color(255,128,0))
+       ;
+
+    cp5.getTab("default")
+       .activateEvent(true)
+       .setLabel("Joint Space Control")
+       .setId(1)
+       ;
+
+    cp5.getTab("Task Space Control")
+       .activateEvent(true)
+       .setId(2)
+       ;
+
+    myTextlabelA = cp5.addTextlabel("label")
+                     .setText("Controller for OpenManipulator SCARA")
+                     .setPosition(10,20)
+                     .setColorValue(0xffffff00)
+                     .setFont(createFont("Georgia",20))
+                     ;
+
+    cp5.addToggle("Controller_OnOff")
+       .setPosition(0,50)
+       .setSize(400,40)
+       .setMode(Toggle.SWITCH)
+       .setFont(createFont("arial",15))
+       .setColorForeground(color(0, 160, 100))
+       .setColorBackground(color(255, 255, 255))
+       ;
+
+    joint1 = cp5.addKnob("joint1")
+             .setRange(-3.14,3.14)
+             .setValue(0)
+             .setPosition(30,140)
+             .setRadius(50)
+             .setDragDirection(Knob.HORIZONTAL)
+             .setFont(createFont("arial",10))
+             .setColorForeground(color(255))
+             .setColorBackground(color(0, 160, 100))
+             .setColorActive(color(255,255,0))
+             ;
+
+    joint2 = cp5.addKnob("joint2")
+             .setRange(-3.14,3.14)
+             .setValue(0)
+             .setPosition(150,140)
+             .setRadius(50)
+             .setDragDirection(Knob.HORIZONTAL)
+             .setFont(createFont("arial",10))
+             .setColorForeground(color(255))
+             .setColorBackground(color(0, 160, 100))
+             .setColorActive(color(255,255,0))
+             ;
+
+    gripper = cp5.addKnob("gripper")
+             .setRange(-3.14,3.14)
+             .setValue(0)
+             .setPosition(270,140)
+             .setRadius(50)
+             .setDragDirection(Knob.HORIZONTAL)
+             .setFont(createFont("arial",10))
+             .setColorForeground(color(255))
+             .setColorBackground(color(0, 160, 100))
+             .setColorActive(color(255,255,0))
+             ;
+
+    cp5.addButton("Origin")
+       .setValue(0)
+       .setPosition(0,350)
+       .setSize(80,40)
+       .setFont(createFont("arial",13))
+       .setColorForeground(color(150,150,0))
+       .setColorBackground(color(100, 160, 0))
+       ;
+
+    cp5.addButton("Basic")
+       .setValue(0)
+       .setPosition(320,350)
+       .setSize(80,40)
+       .setFont(createFont("arial",13))
+       .setColorForeground(color(150,150,0))
+       .setColorBackground(color(100, 160, 0))
+       ;
+
+    cp5.addButton("Send_Joint_Angle")
+       .setValue(0)
+       .setPosition(0,400)
+       .setSize(400,40)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.addButton("Set_Gripper")
+       .setValue(0)
+       .setPosition(0,460)
+       .setSize(400,40)
+       .setFont(createFont("arial",15))
+       ;
+
+    cp5.addToggle("Gripper_OnOff")
+       .setPosition(0,520)
+       .setSize(400,40)
+       .setMode(Toggle.SWITCH)
+       .setFont(createFont("arial",15))
+       .setColorForeground(color(0, 160, 100))
+       .setColorBackground(color(255, 255, 255))
+       ;
+
+    cp5.getController("label").moveTo("global");
+    cp5.getController("Controller_OnOff").moveTo("global");
+
+    // cp5.getController("Torque_Off").moveTo("Task Space Control");
+    // cp5.getController("Make_Joint_Pose").moveTo("Task Space Control");
+    // cp5.getController("Make_Gripper_Pose").moveTo("Task Space Control");
+    // cp5.getController("Motion_Start").moveTo("Task Space Control");
+    // cp5.getController("Motion_Repeat").moveTo("Task Space Control");
+  }
+
+  public void draw()
+  {
+    background(0);
+  }
+
+  void Controller_OnOff(boolean flag)
+  {
+    onoff_flag = flag;
+    if (onoff_flag)
+    {
+      joint1.setValue(joint_angle[0]);
+      joint2.setValue(joint_angle[1]);
+      gripper.setValue(gripper_angle);
+
+      opencr_port.write("ready" + '\n');
+      println("OpenManipulator Chain Ready!!!");
+    }
+    else
+    {
+      opencr_port.write("end" + '\n');
+      println("OpenManipulator Chain End...");
+    }
+  }
+
+  void joint1(float angle)
+  {
+    joint_angle[0] = angle;
+  }
+
+  void joint2(float angle)
+  {
+    joint_angle[1] = angle;
+  }
+
+  void gripper(float angle)
+  {
+    gripper_angle = angle;
+  }
+
+  public void Origin(int theValue)
+  {
+    if (onoff_flag)
+    {
+      joint_angle[0] = 0.0;
+      joint_angle[1] = 0.0;
+
+      joint1.setValue(joint_angle[0]);
+      joint2.setValue(joint_angle[1]);
+      gripper.setValue(gripper_angle);
+
+      opencr_port.write("joint"        + ',' +
+                        joint_angle[0] + ',' +
+                        joint_angle[1] + '\n');
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  public void Basic(int theValue)
+  {
+    if (onoff_flag)
+    {
+      joint_angle[0] = 60.0 * PI/180.0;
+      joint_angle[1] = 40.0 * PI/180.0;
+
+      joint1.setValue(joint_angle[0]);
+      joint2.setValue(joint_angle[1]);
+
+      opencr_port.write("joint"        + ',' +
+                        joint_angle[0] + ',' +
+                        joint_angle[1] + '\n');
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  public void Send_Joint_Angle(int theValue)
+  {
+    if (onoff_flag)
+    {
+      opencr_port.write("joint"        + ',' +
+                        joint_angle[0] + ',' +
+                        joint_angle[1] + '\n');
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
+
+  public void Set_Gripper(int theValue)
+  {
+    if (onoff_flag)
+    {
+      opencr_port.write("gripper"  + ',' +
+                        gripper_angle + '\n');
+    }
+    else
+    {
+      println("Please, Set On Controller");
+    }
+  }
 }

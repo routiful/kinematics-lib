@@ -16,7 +16,7 @@
 
 /* Authors: Darby Lim */
 
-#include "open_manipulator_chain_config.h"
+#include "open_manipulator_scara_config.h"
 
 // #define DEBUG
 #define DYNAMIXEL
@@ -59,7 +59,6 @@ void setup()
 void loop()
 {
   getDataFromProcessing(comm);
-  setMotion(motion);
   showLedStatus();
 }
 
@@ -100,8 +99,6 @@ void getDataFromProcessing(bool &comm)
       float joint_pos[LINK_NUM] = {0.0,
                                    cmd[JOINT1].toFloat(),
                                    cmd[JOINT2].toFloat(),
-                                   cmd[JOINT3].toFloat(),
-                                   cmd[JOINT4].toFloat(),
                                    0.0};
       setJointPropPos(joint_pos);
       joint_tra = trajectory->minimumJerk(start_prop,
@@ -145,72 +142,6 @@ void getDataFromProcessing(bool &comm)
 
       moving = true;
     }
-#ifdef DYNAMIXEL
-    else if (cmd[0] == "loose")
-    {
-      setMotorTorque(false);
-    }
-    else if (cmd[0] == "get")
-    {
-      if (cmd[1].toInt() == -1)
-      {
-        angle_storage[motion_num][0] = -1;
-        motion_num++;
-      }
-      else if (cmd[1].toInt() == -2)
-      {
-        angle_storage[motion_num][0] = -2;
-        motion_num++;
-      }
-      else if (cmd[1].toInt() < STORAGE)
-      {
-        getDynamixelPosition();
-        getMotorAngle(motor_angle);
-        sendJointDataToProcessing();
-
-        for (int i = 0; i < LINK_NUM; i++)
-        {
-          angle_storage[motion_num][i] = motor[i].present_position;
-        }
-        motion_num++;
-      }
-      else
-      {
-        Serial.println("Overflow");
-      }
-    }
-    else if (cmd[0] == "once")
-    {
-      setMotorTorque(true);
-
-      getDynamixelPosition();
-      getMotorAngle(motor_angle);
-      sendJointDataToProcessing();
-
-      motion = true;
-    }
-    else if (cmd[0] == "repeat")
-    {
-      setMotorTorque(true);
-
-      getDynamixelPosition();
-      getMotorAngle(motor_angle);
-      sendJointDataToProcessing();
-
-      motion = true;
-      repeat = true;
-    }
-    else if (cmd[0] == "stop")
-    {
-      for (int i=0; i<STORAGE; i++)
-      {
-        angle_storage[i][0] = 0;
-      }
-      motion     = false;
-      repeat     = false;
-      motion_num = 0;
-    }
-#endif
     else
     {
       Serial.println("Error");
@@ -266,85 +197,6 @@ void handler_control()
 }
 
 /*******************************************************************************
-* Set motion
-*******************************************************************************/
-void setMotion(bool onoff)
-{
-  static uint8_t motion_cnt = 0;
-
-  if (onoff)
-  {
-    if (moving)
-      return;
-
-    if (motion_cnt >= motion_num)
-    {
-      if (repeat)
-      {
-        motion_cnt = 0;
-      }
-      else
-      {
-        for (int i=0; i<STORAGE; i++)
-        {
-          angle_storage[i][0] = 0;
-        }
-        motion     = false;
-        motion_cnt = 0;
-        motion_num = 0;
-        Serial.println("end" + String(","));
-        return;
-      }
-    }
-
-    if (angle_storage[motion_cnt][0] == -1)
-    {
-      setGripperPropPos(grip_on);
-      joint_tra = trajectory->minimumJerk(start_prop,
-                                          end_prop,
-                                          LINK_NUM,
-                                          control_period,
-                                          mov_time);
-
-      moving = true;
-      motion_cnt++;
-    }
-    else if (angle_storage[motion_cnt][0] == -2)
-    {
-      setGripperPropPos(grip_off);
-      joint_tra = trajectory->minimumJerk(start_prop,
-                                          end_prop,
-                                          LINK_NUM,
-                                          control_period,
-                                          mov_time);
-      moving = true;
-      motion_cnt++;
-    }
-    else
-    {
-      float joint_pos[LINK_NUM] = {0.0,
-                                   angle_storage[motion_cnt][JOINT1],
-                                   angle_storage[motion_cnt][JOINT2],
-                                   angle_storage[motion_cnt][JOINT3],
-                                   angle_storage[motion_cnt][JOINT4],
-                                   0.0};
-      setJointPropPos(joint_pos);
-      joint_tra = trajectory->minimumJerk(start_prop,
-                                          end_prop,
-                                          LINK_NUM,
-                                          control_period,
-                                          mov_time);
-      moving = true;
-      motion_cnt++;
-    }
-  }
-  else
-  {
-    motion_cnt = 0;
-  }
-}
-
-/*******************************************************************************
 * Send Joint Data to Processing
 *******************************************************************************/
 void sendJointDataToProcessing()
@@ -354,10 +206,6 @@ void sendJointDataToProcessing()
   Serial.print(link[JOINT1].q_);
   Serial.print(",");
   Serial.print(link[JOINT2].q_);
-  Serial.print(",");
-  Serial.print(link[JOINT3].q_);
-  Serial.print(",");
-  Serial.print(link[JOINT4].q_);
   Serial.print(",");
   Serial.println(link[END].q_);
 }
@@ -390,22 +238,6 @@ void setJointPropPos(float* joint_pos)
   end_prop[JOINT2].pos   = joint_pos[JOINT2];
   end_prop[JOINT2].vel   = 0.0;
   end_prop[JOINT2].acc   = 0.0;
-
-  start_prop[JOINT3].pos = motor[JOINT3].present_position;
-  start_prop[JOINT3].vel = 0.0;
-  start_prop[JOINT3].acc = 0.0;
-
-  end_prop[JOINT3].pos   = joint_pos[JOINT3];
-  end_prop[JOINT3].vel   = 0.0;
-  end_prop[JOINT3].acc   = 0.0;
-
-  start_prop[JOINT4].pos = motor[JOINT4].present_position;
-  start_prop[JOINT4].vel = 0.0;
-  start_prop[JOINT4].acc = 0.0;
-
-  end_prop[JOINT4].pos   = joint_pos[JOINT4];
-  end_prop[JOINT4].vel   = 0.0;
-  end_prop[JOINT4].acc   = 0.0;
 
   start_prop[END].pos = motor[END].present_position;
   start_prop[END].vel = 0.0;
@@ -444,22 +276,6 @@ void setGripperPropPos(float gripper)
   end_prop[JOINT2].pos   = motor[JOINT2].present_position;
   end_prop[JOINT2].vel   = 0.0;
   end_prop[JOINT2].acc   = 0.0;
-
-  start_prop[JOINT3].pos = motor[JOINT3].present_position;
-  start_prop[JOINT3].vel = 0.0;
-  start_prop[JOINT3].acc = 0.0;
-
-  end_prop[JOINT3].pos   = motor[JOINT3].present_position;
-  end_prop[JOINT3].vel   = 0.0;
-  end_prop[JOINT3].acc   = 0.0;
-
-  start_prop[JOINT4].pos = motor[JOINT4].present_position;
-  start_prop[JOINT4].vel = 0.0;
-  start_prop[JOINT4].acc = 0.0;
-
-  end_prop[JOINT4].pos   = motor[JOINT4].present_position;
-  end_prop[JOINT4].vel   = 0.0;
-  end_prop[JOINT4].acc   = 0.0;
 
   start_prop[END].pos = motor[END].present_position;
   start_prop[END].vel = 0.0;
@@ -608,7 +424,7 @@ void initLinkAndMotor()
   link[JOINT1].dq_                      = 0.0;
   link[JOINT1].ddq_                     = 0.0;
   link[JOINT1].a_                       << 0, 0, 1;
-  link[JOINT1].b_                       << 0.012, 0, 0.036;
+  link[JOINT1].b_                       << 0.0, 0.0, 0.094;
   link[JOINT1].v_                       = Eigen::Vector3f::Zero();
   link[JOINT1].w_                       = Eigen::Vector3f::Zero();
 
@@ -627,8 +443,8 @@ void initLinkAndMotor()
   link[JOINT2].q_                       = 0.0;
   link[JOINT2].dq_                      = 0.0;
   link[JOINT2].ddq_                     = 0.0;
-  link[JOINT2].a_                       << 0, -1, 0;
-  link[JOINT2].b_                       << 0, 0, 0.040;
+  link[JOINT2].a_                       << 0, 0, 1;
+  link[JOINT2].b_                       << 0.0, 0.136, 0.0;
   link[JOINT2].v_                       = Eigen::Vector3f::Zero();
   link[JOINT2].w_                       = Eigen::Vector3f::Zero();
 
@@ -638,48 +454,8 @@ void initLinkAndMotor()
   motor[JOINT2].present_position        = 0.0;
 
 
-  link[JOINT3].name_                    = "Joint3";
-  link[JOINT3].mother_                  = 2;
-  link[JOINT3].sibling_                 = -1;
-  link[JOINT3].child_                   = 4;
-  link[JOINT3].mass_                    = 1.0;
-  link[JOINT3].p_                       = Eigen::Vector3f::Zero();
-  link[JOINT3].R_                       = Eigen::Matrix3f::Identity(3,3);
-  link[JOINT3].q_                       = 0.0;
-  link[JOINT3].dq_                      = 0.0;
-  link[JOINT3].ddq_                     = 0.0;
-  link[JOINT3].a_                       << 0, -1, 0;
-  link[JOINT3].b_                       << 0.022, 0, 0.122;
-  link[JOINT3].v_                       = Eigen::Vector3f::Zero();
-  link[JOINT3].w_                       = Eigen::Vector3f::Zero();
-
-  motor[JOINT3].name                    = link[JOINT3].name_;
-  motor[JOINT3].id                      = 3;
-  motor[JOINT3].goal_position           = 0.0;
-  motor[JOINT3].present_position        = 0.0;
-
-  link[JOINT4].name_                    = "Joint4";
-  link[JOINT4].mother_                  = 3;
-  link[JOINT4].sibling_                 = -1;
-  link[JOINT4].child_                   = 5;
-  link[JOINT4].mass_                    = 1.0;
-  link[JOINT4].p_                       = Eigen::Vector3f::Zero();
-  link[JOINT4].R_                       = Eigen::Matrix3f::Identity(3,3);
-  link[JOINT4].q_                       = 0.0;
-  link[JOINT4].dq_                      = 0.0;
-  link[JOINT4].ddq_                     = 0.0;
-  link[JOINT4].a_                       << 0, -1, 0;
-  link[JOINT4].b_                       << 0.124, 0, 0;
-  link[JOINT4].v_                       = Eigen::Vector3f::Zero();
-  link[JOINT4].w_                       = Eigen::Vector3f::Zero();
-
-  motor[JOINT4].name                    = link[JOINT4].name_;
-  motor[JOINT4].id                      = 4;
-  motor[JOINT4].goal_position           = 0.0;
-  motor[JOINT4].present_position        = 0.0;
-
   link[END].name_                       = "Gripper";
-  link[END].mother_                     = 4;
+  link[END].mother_                     = 2;
   link[END].sibling_                    = -1;
   link[END].child_                      = -1;
   link[END].mass_                       = 1.0;
@@ -688,13 +464,13 @@ void initLinkAndMotor()
   link[END].q_                          = 0.0;
   link[END].dq_                         = 0.0;
   link[END].ddq_                        = 0.0;
-  link[END].a_                          = Eigen::Vector3f::Zero();
-  link[END].b_                          << 0.030, 0, 0;
+  link[END].a_                          << -1, 0, 0;
+  link[END].b_                          << 0.0, 0.104, 0.0;
   link[END].v_                          = Eigen::Vector3f::Zero();
   link[END].w_                          = Eigen::Vector3f::Zero();
 
   motor[END].name                       = link[END].name_;
-  motor[END].id                         = 5;
+  motor[END].id                         = 3;
   motor[END].goal_position              = 0.0;
   motor[END].present_position           = 0.0;
 }
@@ -740,10 +516,6 @@ void establishContactToProcessing()
 {
   if (Serial.available())
   {
-    Serial.print(0.0);
-    Serial.print(",");
-    Serial.print(0.0);
-    Serial.print(",");
     Serial.print(0.0);
     Serial.print(",");
     Serial.print(0.0);

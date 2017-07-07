@@ -1,9 +1,24 @@
+/*******************************************************************************
+* Copyright 2016 ROBOTIS CO., LTD.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*******************************************************************************/
+
+/* Authors: Darby Lim */
+
 /**
- * simulation.
- *
- * this code receives data from open_manipulator_chain.ino
- * to show how to change pose of objects.
-*/
+ * this code is compatible with open_manipulator_chain.ino
+**/
 
 // Multiple Window
 ChildApplet child;
@@ -23,19 +38,21 @@ float model_rot_x, model_rot_z, model_trans_x, model_trans_y, model_scale_factor
 // Serial variable
 Serial opencr_port;
 
-int ball_num = 0;
-float[][] ball_pos = new float[7][4];
-
 // Angle variable
 float[] joint_angle = new float[4];
 float[] gripper_pos = new float[2];
 
+/*******************************************************************************
+* Setting window size
+*******************************************************************************/
 void settings()
 {
   size(600, 600, OPENGL);
-  smooth();
 }
 
+/*******************************************************************************
+* Setup
+*******************************************************************************/
 void setup()
 {
   surface.setTitle("OpenManipulator Chain");
@@ -44,9 +61,12 @@ void setup()
   initShape();
   initView();
 
-  connectOpenCR(0);
+  connectOpenCR(0); // It is depend on laptop enviroments.
 }
 
+/*******************************************************************************
+* Draw (loop function)
+*******************************************************************************/
 void draw()
 {
   setWindow();
@@ -55,10 +75,11 @@ void draw()
   drawWorldFrame();
 
   drawManipulator();
-
-  drawBall();
 }
 
+/*******************************************************************************
+* Connect OpenCR
+*******************************************************************************/
 void connectOpenCR(int port_num)
 {
   printArray(Serial.list());
@@ -68,6 +89,9 @@ void connectOpenCR(int port_num)
   opencr_port.bufferUntil('\n');
 }
 
+/*******************************************************************************
+* Serial Interrupt
+*******************************************************************************/
 void serialEvent(Serial opencr_port)
 {
   String opencr_string = opencr_port.readStringUntil('\n');
@@ -91,16 +115,15 @@ void serialEvent(Serial opencr_port)
       }
     }
   }
-  else if (cmd[0].equals("end"))
-  {
-    ball_num = -1;
-  }
   else
   {
     println("Error");
   }
 }
 
+/*******************************************************************************
+* Init viewpoint and camera
+*******************************************************************************/
 void initView()
 {
   float camera_y = height/2.0;
@@ -118,6 +141,9 @@ void initView()
          0, 1, 0);
 }
 
+/*******************************************************************************
+* Get shape
+*******************************************************************************/
 void initShape()
 {
   link1       = loadShape("meshes/chain/link1.obj");
@@ -132,6 +158,9 @@ void initShape()
   gripperOff();
 }
 
+/*******************************************************************************
+* Set window characteristic
+*******************************************************************************/
 void setWindow()
 {
   lights();
@@ -144,43 +173,9 @@ void setWindow()
   rotateZ(radians(140));
 }
 
-void drawBall()
-{
-  if (ball_num == -1)
-    return;
-
-  for (int i=0; i<ball_num; i++)
-  {
-    setBall(i);
-  }
-}
-
-void setBall(int num)
-{
-  pushMatrix();
-  translate(-model_trans_x, -model_trans_y, 0);
-  rotateX(model_rot_x);
-  rotateZ(model_rot_z);
-
-  translate(12, 0, 36);
-  rotateZ(ball_pos[num][0]);
-
-  translate(0, 2, 40);
-  rotateY(ball_pos[num][1]);
-
-  translate(22, 0, 122);
-  rotateY(ball_pos[num][2]);
-
-  translate(124, 0, 0);
-  rotateY(ball_pos[num][3]);
-
-  translate(69, 0, 0);
-  drawSphere(30,0,0,
-             255,255,255,
-             20);
-  popMatrix();
-}
-
+/*******************************************************************************
+* Draw sphere
+*******************************************************************************/
 void drawSphere(int x, int y, int z, int r, int g, int b, int size)
 {
   pushMatrix();
@@ -190,6 +185,9 @@ void drawSphere(int x, int y, int z, int r, int g, int b, int size)
   popMatrix();
 }
 
+/*******************************************************************************
+* Draw title
+*******************************************************************************/
 void drawTitle()
 {
   pushMatrix();
@@ -205,6 +203,9 @@ void drawTitle()
   popMatrix();
 }
 
+/*******************************************************************************
+* Draw manipulator
+*******************************************************************************/
 void drawManipulator()
 {
   scale(1 + model_scale_factor);
@@ -237,7 +238,7 @@ void drawManipulator()
   drawLocalFrame();
 
   translate(69, 0, 0);
-  drawSphere(30,0,0,255,255,0,20);
+  drawSphere(30,0,0,100,100,100,10);
   translate(0, gripper_pos[0], 0);
   shape(gripper);
   drawLocalFrame();
@@ -249,6 +250,9 @@ void drawManipulator()
   popMatrix();
 }
 
+/*******************************************************************************
+* Draw world frame
+*******************************************************************************/
 void drawWorldFrame()
 {
   strokeWeight(10);
@@ -264,6 +268,9 @@ void drawWorldFrame()
   line(0, 0, 0, 0, 0, 200);
 }
 
+/*******************************************************************************
+* Draw local frame
+*******************************************************************************/
 void drawLocalFrame()
 {
   strokeWeight(10);
@@ -279,6 +286,9 @@ void drawLocalFrame()
   line(0, 0, 0, 0, 0, 100);
 }
 
+/*******************************************************************************
+* Set joint angle
+*******************************************************************************/
 void setJointAngle(float angle1, float angle2, float angle3, float angle4)
 {
   joint_angle[0] = angle1;
@@ -287,18 +297,27 @@ void setJointAngle(float angle1, float angle2, float angle3, float angle4)
   joint_angle[3] = angle4;
 }
 
+/*******************************************************************************
+* Gripper on
+*******************************************************************************/
 void gripperOn()
 {
   gripper_pos[0] = -25;
   gripper_pos[1] = -gripper_pos[0] - gripper_pos[0];
 }
 
+/*******************************************************************************
+* Gripper off
+*******************************************************************************/
 void gripperOff()
 {
   gripper_pos[0] = -45;
   gripper_pos[1] = -gripper_pos[0] - gripper_pos[0];
 }
 
+/*******************************************************************************
+* Gripper angle to position
+*******************************************************************************/
 void gripperAngle2Pos(float angle)
 {
   float angle2pos = map(angle, 0.0, 3.5, -45.0, 0.0);
@@ -306,12 +325,18 @@ void gripperAngle2Pos(float angle)
   gripper_pos[1] = -gripper_pos[0] - angle2pos;
 }
 
+/*******************************************************************************
+* Mouse drag event
+*******************************************************************************/
 void mouseDragged()
 {
   model_rot_z -= (mouseX - pmouseX) * 0.01;
   model_rot_x -= (mouseY - pmouseY) * 0.01;
 }
 
+/*******************************************************************************
+* Key press event
+*******************************************************************************/
 void keyPressed()
 {
   if      (key == 'a') model_trans_x      -= 50;
@@ -355,7 +380,7 @@ class ChildApplet extends PApplet
 
     cp5 = new ControlP5(this);
 
-    cp5.addTab("Application")
+    cp5.addTab("Hand Teaching")
        .setColorBackground(color(0, 160, 100))
        .setColorLabel(color(255))
        .setColorActive(color(255,128,0))
@@ -363,11 +388,11 @@ class ChildApplet extends PApplet
 
     cp5.getTab("default")
        .activateEvent(true)
-       .setLabel("JointSpaceControl")
+       .setLabel("Joint Space Control")
        .setId(1)
        ;
 
-    cp5.getTab("Application")
+    cp5.getTab("Hand Teaching")
        .activateEvent(true)
        .setId(2)
        ;
@@ -384,6 +409,8 @@ class ChildApplet extends PApplet
        .setSize(400,40)
        .setMode(Toggle.SWITCH)
        .setFont(createFont("arial",15))
+       .setColorForeground(color(0, 160, 100))
+       .setColorBackground(color(255, 255, 255))
        ;
 
     joint1 = cp5.addKnob("joint1")
@@ -483,6 +510,8 @@ class ChildApplet extends PApplet
        .setSize(400,40)
        .setMode(Toggle.SWITCH)
        .setFont(createFont("arial",15))
+       .setColorForeground(color(0, 160, 100))
+       .setColorBackground(color(255, 255, 255))
        ;
 
     cp5.addButton("Torque_Off")
@@ -504,6 +533,8 @@ class ChildApplet extends PApplet
        .setSize(400,40)
        .setMode(Toggle.SWITCH)
        .setFont(createFont("arial",15))
+       .setColorForeground(color(0, 160, 100))
+       .setColorBackground(color(255, 255, 255))
        ;
 
     cp5.addButton("Motion_Start")
@@ -518,16 +549,18 @@ class ChildApplet extends PApplet
        .setSize(400,40)
        .setMode(Toggle.SWITCH)
        .setFont(createFont("arial",15))
+       .setColorForeground(color(0, 160, 100))
+       .setColorBackground(color(255, 255, 255))
        ;
 
     cp5.getController("label").moveTo("global");
     cp5.getController("Controller_OnOff").moveTo("global");
 
-    cp5.getController("Torque_Off").moveTo("Application");
-    cp5.getController("Make_Joint_Pose").moveTo("Application");
-    cp5.getController("Make_Gripper_Pose").moveTo("Application");
-    cp5.getController("Motion_Start").moveTo("Application");
-    cp5.getController("Motion_Repeat").moveTo("Application");
+    cp5.getController("Torque_Off").moveTo("Hand Teaching");
+    cp5.getController("Make_Joint_Pose").moveTo("Hand Teaching");
+    cp5.getController("Make_Gripper_Pose").moveTo("Hand Teaching");
+    cp5.getController("Motion_Start").moveTo("Hand Teaching");
+    cp5.getController("Motion_Repeat").moveTo("Hand Teaching");
   }
 
   public void draw()
@@ -702,12 +735,6 @@ class ChildApplet extends PApplet
                         motion_num + '\n');
 
       motion_num++;
-
-      for (int i=0; i<4; i++)
-      {
-        ball_pos[ball_num][i] = -joint_angle[i];
-      }
-      ball_num++;
     }
     else
     {
