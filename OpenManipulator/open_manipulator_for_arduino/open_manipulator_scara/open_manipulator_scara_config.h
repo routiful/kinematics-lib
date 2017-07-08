@@ -37,7 +37,7 @@
 #define BASE    0
 #define JOINT1  1
 #define JOINT2  2
-#define END     4
+#define END     3
 
 const float grip_on  = 0.0;
 const float grip_off = -1.0;

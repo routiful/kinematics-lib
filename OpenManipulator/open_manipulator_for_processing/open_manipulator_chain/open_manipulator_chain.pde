@@ -401,7 +401,7 @@ class ChildApplet extends PApplet
                      .setText("Controller for OpenManipulator Chain")
                      .setPosition(10,20)
                      .setColorValue(0xffffff00)
-                     .setFont(createFont("Georgia",20))
+                     .setFont(createFont("arial",20))
                      ;
 
     cp5.addToggle("Controller_OnOff")

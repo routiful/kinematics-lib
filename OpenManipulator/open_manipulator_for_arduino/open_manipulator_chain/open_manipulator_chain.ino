@@ -234,11 +234,12 @@ void handler_control()
       getDynamixelPosition();
       getMotorAngle(motor_angle);
 #endif
-      getLinkAngle(link_angle);
+
       kinematics->forward(link, BASE);
 
       moving = false;
       cnt = 0;
+      Serial.println("end");
     }
     else
     {
@@ -246,22 +247,23 @@ void handler_control()
       {
         link[num].q_ = joint_tra(cnt, num);
       }
-      cnt++;
-    }
 #ifdef SIMULATION
-    sendJointDataToProcessing();
-    getLinkAngle(link_angle);
+      sendJointDataToProcessing();
+      getLinkAngle(link_angle);
 #endif
 
 #ifdef DEBUG
-    sendJointDataToProcessing();
-    getLinkAngle(link_angle);
+      sendJointDataToProcessing();
+      getLinkAngle(link_angle);
 #endif
 
 #ifdef DYNAMIXEL
-    setJointDataToDynamixel();
-    setGripperDataToDynamixel();
+      setJointDataToDynamixel();
+      setGripperDataToDynamixel();
 #endif
+
+      cnt++;
+    }
   }
 }
 
