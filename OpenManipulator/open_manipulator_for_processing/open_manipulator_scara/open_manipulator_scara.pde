@@ -454,7 +454,7 @@ class ChildApplet extends PApplet
     slider2d = cp5.addSlider2D("Drawing")
                   .setPosition(50,200)
                   .setSize(300,300)
-                  .setMinMax(150,240,-150,100)
+                  .setMinMax(300,240,-300,40)
                   .setValue(0,240)
                    //.disableCrosshair()
      ;

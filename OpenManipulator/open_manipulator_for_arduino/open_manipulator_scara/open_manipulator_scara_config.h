@@ -42,7 +42,7 @@
 const float grip_on  = 0.0;
 const float grip_off = -1.0;
 
-float mov_time             = 3.0;
+float mov_time             = 0.2;
 const float control_period = 0.008;
 
 bool moving        = false;
