@@ -235,7 +235,7 @@ void handler_control()
       getMotorAngle(motor_angle);
 #endif
 
-      kinematics->forward(link, BASE);
+      setFK(link, BASE);
 
       moving = false;
       cnt = 0;

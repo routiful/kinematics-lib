@@ -61,7 +61,7 @@ void setup()
   initShape();
   initView();
 
-  connectOpenCR(7); // It is depend on laptop enviroments.
+  connectOpenCR(0); // It is depend on laptop enviroments.
 }
 
 /*******************************************************************************
@@ -360,7 +360,7 @@ class ChildApplet extends PApplet
 
     headLabel = cp5.addTextlabel("label")
                    .setText("Controller for OpenManipulator SCARA")
-                   .setPosition(10,20)
+                   .setPosition(4,17)
                    .setColorValue(0xffffff00)
                    .setFont(createFont("arial",20))
                    ;
@@ -454,8 +454,8 @@ class ChildApplet extends PApplet
     slider2d = cp5.addSlider2D("Drawing")
                   .setPosition(50,200)
                   .setSize(300,300)
-                  .setMinMax(0,0,300,300)
-                  .setValue(150,150)
+                  .setMinMax(150,240,-150,100)
+                  .setValue(0,240)
                    //.disableCrosshair()
      ;
 
@@ -593,9 +593,13 @@ class ChildApplet extends PApplet
 
   void Drawing()
   {
-    float x = slider2d.getArrayValue()[0];
-    float y = slider2d.getArrayValue()[1];
+    float x = slider2d.getArrayValue()[0] * 0.001;
+    float y = slider2d.getArrayValue()[1] * 0.001;
 
-    println("x = " + x + " y = " + y);
+    opencr_port.write("pos"  + ',' +
+                      y      + ',' +
+                      x      + '\n');
+
+    println("x = " + y + " y = " + x);
   }
 }

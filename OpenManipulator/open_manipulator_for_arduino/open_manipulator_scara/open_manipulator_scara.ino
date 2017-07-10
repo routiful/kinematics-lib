@@ -18,8 +18,8 @@
 
 #include "open_manipulator_scara_config.h"
 
-#define DEBUG
-// #define DYNAMIXEL
+// #define DEBUG
+#define DYNAMIXEL
 #define SIMULATION
 
 /*******************************************************************************
@@ -142,6 +142,28 @@ void getDataFromProcessing(bool &comm)
 
       moving = true;
     }
+    else if (cmd[0] == "pos")
+    {
+      open_manipulator::Pose goal_pose;
+      goal_pose.position << cmd[JOINT1].toFloat(),
+                            cmd[JOINT2].toFloat(),
+                            0.094;
+
+      setIK("position", link, END, goal_pose);
+
+      float joint_pos[LINK_NUM] = {0.0,
+                                   link[JOINT1].q_,
+                                   link[JOINT2].q_,
+                                   0.0};
+
+      setJointPropPos(joint_pos);
+      joint_tra = trajectory->minimumJerk(start_prop,
+                                          end_prop,
+                                          LINK_NUM,
+                                          control_period,
+                                          mov_time);
+      moving = true;
+    }
     else
     {
       Serial.println("Error");
@@ -166,7 +188,7 @@ void handler_control()
       getMotorAngle(motor_angle);
 #endif
 
-      kinematics->forward(link, BASE);
+      setFK(link, BASE);
 
       moving = false;
       cnt = 0;
@@ -352,17 +374,14 @@ void setFK(open_manipulator::Link* link, int8_t me)
 /*******************************************************************************
 * Inverse Kinematics
 *******************************************************************************/
-void setIK(open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose)
+void setIK(String cmd, open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose)
 {
-    // open_manipulator::Pose goal_pose;
-    // goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
-    // goal_pose.orientation << 0.940, 0.000, -0.342,
-    //                           0.000, 1.000, 0.000,
-    //                           0.342, 0.000, 0.940;
-
-    // kinematics->sr_inverse(link, END, goal_pose);
-
+  if (cmd == "normal")
+    kinematics->inverse(link, to, goal_pose);
+  else if (cmd == "robust")
     kinematics->sr_inverse(link, to, goal_pose);
+  else if (cmd == "position")
+    kinematics->position_only_inverse(link, to, goal_pose);
 }
 
 /*******************************************************************************
@@ -446,7 +465,7 @@ void initLinkAndMotor()
   link[JOINT2].dq_                      = 0.0;
   link[JOINT2].ddq_                     = 0.0;
   link[JOINT2].a_                       << 0, 0, 1;
-  link[JOINT2].b_                       << 0.0, 0.136, 0.0;
+  link[JOINT2].b_                       << 0.136, 0.0, 0.0;
   link[JOINT2].v_                       = Eigen::Vector3f::Zero();
   link[JOINT2].w_                       = Eigen::Vector3f::Zero();
 
@@ -454,7 +473,6 @@ void initLinkAndMotor()
   motor[JOINT2].id                      = 2;
   motor[JOINT2].goal_position           = 0.0;
   motor[JOINT2].present_position        = 0.0;
-
 
   link[END].name_                       = "Gripper";
   link[END].mother_                     = 2;
@@ -467,7 +485,7 @@ void initLinkAndMotor()
   link[END].dq_                         = 0.0;
   link[END].ddq_                        = 0.0;
   link[END].a_                          << -1, 0, 0;
-  link[END].b_                          << 0.0, 0.104, 0.0;
+  link[END].b_                          << 0.104, 0.0, 0.0;
   link[END].v_                          = Eigen::Vector3f::Zero();
   link[END].w_                          = Eigen::Vector3f::Zero();
 
