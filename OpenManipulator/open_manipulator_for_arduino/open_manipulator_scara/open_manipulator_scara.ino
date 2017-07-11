@@ -18,8 +18,8 @@
 
 #include "open_manipulator_scara_config.h"
 
-// #define DEBUG
-#define DYNAMIXEL
+#define DEBUG
+// #define DYNAMIXEL
 #define SIMULATION
 
 /*******************************************************************************
@@ -46,10 +46,30 @@ void setup()
   establishContactToProcessing();
 #endif
 
+  // link[JOINT1].q_ = 20.0*DEG2RAD;
+  // link[JOINT2].q_ = -20.0*DEG2RAD;
+  // link[JOINT3].q_ = 40.0*DEG2RAD;
+  //
   setFK(link, BASE);
 
+  // showFKResult(link, BASE, END);
+
+//   0.198, 0.077, 0.061,
+// R_ :
+// 0.766, -0.643, 0.000,
+// 0.643, 0.766, 0.000,
+// 0.000, 0.000, 1.000,
+
+  // open_manipulator::Pose goal_pose;
+  // goal_pose.position << 0.198, 0.077, 0.061;
+  //
+  // setIK("position", link, END, goal_pose);
+  //
+  // sendJointDataToProcessing();
+
+
 #ifdef DEBUG
-  Serial.println("OpenManipulator Chain Initialization Success!!");
+  Serial.println("OpenManipulator SCARA Initialization Success!!");
 #endif
 }
 
@@ -99,6 +119,7 @@ void getDataFromProcessing(bool &comm)
       float joint_pos[LINK_NUM] = {0.0,
                                    cmd[JOINT1].toFloat(),
                                    cmd[JOINT2].toFloat(),
+                                   cmd[JOINT3].toFloat(),
                                    0.0};
       setJointPropPos(joint_pos);
       joint_tra = trajectory->minimumJerk(start_prop,
@@ -110,7 +131,6 @@ void getDataFromProcessing(bool &comm)
     }
     else if (cmd[0] == "gripper")
     {
-
       setGripperPropPos(cmd[1].toFloat());
       joint_tra = trajectory->minimumJerk(start_prop,
                                           end_prop,
@@ -145,15 +165,16 @@ void getDataFromProcessing(bool &comm)
     else if (cmd[0] == "pos")
     {
       open_manipulator::Pose goal_pose;
-      goal_pose.position << cmd[JOINT1].toFloat(),
-                            cmd[JOINT2].toFloat(),
-                            0.094;
+      goal_pose.position << cmd[1].toFloat(),
+                            cmd[2].toFloat(),
+                            0.061;
 
       setIK("position", link, END, goal_pose);
 
       float joint_pos[LINK_NUM] = {0.0,
                                    link[JOINT1].q_,
                                    link[JOINT2].q_,
+                                   link[JOINT3].q_,
                                    0.0};
 
       setJointPropPos(joint_pos);
@@ -231,6 +252,8 @@ void sendJointDataToProcessing()
   Serial.print(",");
   Serial.print(link[JOINT2].q_);
   Serial.print(",");
+  Serial.print(link[JOINT3].q_);
+  Serial.print(",");
   Serial.println(link[END].q_);
 }
 
@@ -262,6 +285,14 @@ void setJointPropPos(float* joint_pos)
   end_prop[JOINT2].pos   = joint_pos[JOINT2];
   end_prop[JOINT2].vel   = 0.0;
   end_prop[JOINT2].acc   = 0.0;
+
+  start_prop[JOINT3].pos = motor[JOINT3].present_position;
+  start_prop[JOINT3].vel = 0.0;
+  start_prop[JOINT3].acc = 0.0;
+
+  end_prop[JOINT3].pos   = joint_pos[JOINT3];
+  end_prop[JOINT3].vel   = 0.0;
+  end_prop[JOINT3].acc   = 0.0;
 
   start_prop[END].pos = motor[END].present_position;
   start_prop[END].vel = 0.0;
@@ -300,6 +331,14 @@ void setGripperPropPos(float gripper)
   end_prop[JOINT2].pos   = motor[JOINT2].present_position;
   end_prop[JOINT2].vel   = 0.0;
   end_prop[JOINT2].acc   = 0.0;
+
+  start_prop[JOINT3].pos = motor[JOINT3].present_position;
+  start_prop[JOINT3].vel = 0.0;
+  start_prop[JOINT3].acc = 0.0;
+
+  end_prop[JOINT3].pos   = motor[JOINT3].present_position;
+  end_prop[JOINT3].vel   = 0.0;
+  end_prop[JOINT3].acc   = 0.0;
 
   start_prop[END].pos = motor[END].present_position;
   start_prop[END].vel = 0.0;
@@ -445,7 +484,7 @@ void initLinkAndMotor()
   link[JOINT1].dq_                      = 0.0;
   link[JOINT1].ddq_                     = 0.0;
   link[JOINT1].a_                       << 0, 0, 1;
-  link[JOINT1].b_                       << 0.0, 0.0, 0.094;
+  link[JOINT1].b_                       << 0.0, 0.0, 0.036;
   link[JOINT1].v_                       = Eigen::Vector3f::Zero();
   link[JOINT1].w_                       = Eigen::Vector3f::Zero();
 
@@ -465,7 +504,7 @@ void initLinkAndMotor()
   link[JOINT2].dq_                      = 0.0;
   link[JOINT2].ddq_                     = 0.0;
   link[JOINT2].a_                       << 0, 0, 1;
-  link[JOINT2].b_                       << 0.136, 0.0, 0.0;
+  link[JOINT2].b_                       << 0.030, 0.0, 0.0248;
   link[JOINT2].v_                       = Eigen::Vector3f::Zero();
   link[JOINT2].w_                       = Eigen::Vector3f::Zero();
 
@@ -474,8 +513,28 @@ void initLinkAndMotor()
   motor[JOINT2].goal_position           = 0.0;
   motor[JOINT2].present_position        = 0.0;
 
+  link[JOINT3].name_                    = "Joint3";
+  link[JOINT3].mother_                  = 2;
+  link[JOINT3].sibling_                 = -1;
+  link[JOINT3].child_                   = 4;
+  link[JOINT3].mass_                    = 1.0;
+  link[JOINT3].p_                       = Eigen::Vector3f::Zero();
+  link[JOINT3].R_                       = Eigen::Matrix3f::Identity(3,3);
+  link[JOINT3].q_                       = 0.0;
+  link[JOINT3].dq_                      = 0.0;
+  link[JOINT3].ddq_                     = 0.0;
+  link[JOINT3].a_                       << 0, 0, 1;
+  link[JOINT3].b_                       << 0.09025, 0.0, 0.0;
+  link[JOINT3].v_                       = Eigen::Vector3f::Zero();
+  link[JOINT3].w_                       = Eigen::Vector3f::Zero();
+
+  motor[JOINT3].name                    = link[JOINT3].name_;
+  motor[JOINT3].id                      = 3;
+  motor[JOINT3].goal_position           = 0.0;
+  motor[JOINT3].present_position        = 0.0;
+
   link[END].name_                       = "Gripper";
-  link[END].mother_                     = 2;
+  link[END].mother_                     = 3;
   link[END].sibling_                    = -1;
   link[END].child_                      = -1;
   link[END].mass_                       = 1.0;
@@ -484,13 +543,13 @@ void initLinkAndMotor()
   link[END].q_                          = 0.0;
   link[END].dq_                         = 0.0;
   link[END].ddq_                        = 0.0;
-  link[END].a_                          << -1, 0, 0;
+  link[END].a_                          << 1, 0, 0;
   link[END].b_                          << 0.104, 0.0, 0.0;
   link[END].v_                          = Eigen::Vector3f::Zero();
   link[END].w_                          = Eigen::Vector3f::Zero();
 
   motor[END].name                       = link[END].name_;
-  motor[END].id                         = 3;
+  motor[END].id                         = 4;
   motor[END].goal_position              = 0.0;
   motor[END].present_position           = 0.0;
 }
@@ -536,6 +595,8 @@ void establishContactToProcessing()
 {
   if (Serial.available())
   {
+    Serial.print(0.0);
+    Serial.print(",");
     Serial.print(0.0);
     Serial.print(",");
     Serial.print(0.0);

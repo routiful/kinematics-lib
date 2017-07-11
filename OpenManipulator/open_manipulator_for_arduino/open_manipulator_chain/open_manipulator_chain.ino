@@ -536,17 +536,14 @@ void setFK(open_manipulator::Link* link, int8_t me)
 /*******************************************************************************
 * Inverse Kinematics
 *******************************************************************************/
-void setIK(open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose)
+void setIK(String cmd, open_manipulator::Link* link, uint8_t to, open_manipulator::Pose goal_pose)
 {
-    // open_manipulator::Pose goal_pose;
-    // goal_pose.position    << 0.179, 0.000, 0.201;   // (0, 20, -30, 30, 0)
-    // goal_pose.orientation << 0.940, 0.000, -0.342,
-    //                           0.000, 1.000, 0.000,
-    //                           0.342, 0.000, 0.940;
-
-    // kinematics->sr_inverse(link, END, goal_pose);
-
+  if (cmd == "normal")
+    kinematics->inverse(link, to, goal_pose);
+  else if (cmd == "robust")
     kinematics->sr_inverse(link, to, goal_pose);
+  else if (cmd == "position")
+    kinematics->position_only_inverse(link, to, goal_pose);
 }
 
 /*******************************************************************************
@@ -629,7 +626,7 @@ void initLinkAndMotor()
   link[JOINT2].q_                       = 0.0;
   link[JOINT2].dq_                      = 0.0;
   link[JOINT2].ddq_                     = 0.0;
-  link[JOINT2].a_                       << 0, -1, 0;
+  link[JOINT2].a_                       << 0, 1, 0;
   link[JOINT2].b_                       << 0, 0, 0.040;
   link[JOINT2].v_                       = Eigen::Vector3f::Zero();
   link[JOINT2].w_                       = Eigen::Vector3f::Zero();
@@ -650,7 +647,7 @@ void initLinkAndMotor()
   link[JOINT3].q_                       = 0.0;
   link[JOINT3].dq_                      = 0.0;
   link[JOINT3].ddq_                     = 0.0;
-  link[JOINT3].a_                       << 0, -1, 0;
+  link[JOINT3].a_                       << 0, 1, 0;
   link[JOINT3].b_                       << 0.022, 0, 0.122;
   link[JOINT3].v_                       = Eigen::Vector3f::Zero();
   link[JOINT3].w_                       = Eigen::Vector3f::Zero();
@@ -670,7 +667,7 @@ void initLinkAndMotor()
   link[JOINT4].q_                       = 0.0;
   link[JOINT4].dq_                      = 0.0;
   link[JOINT4].ddq_                     = 0.0;
-  link[JOINT4].a_                       << 0, -1, 0;
+  link[JOINT4].a_                       << 0, 1, 0;
   link[JOINT4].b_                       << 0.124, 0, 0;
   link[JOINT4].v_                       = Eigen::Vector3f::Zero();
   link[JOINT4].w_                       = Eigen::Vector3f::Zero();

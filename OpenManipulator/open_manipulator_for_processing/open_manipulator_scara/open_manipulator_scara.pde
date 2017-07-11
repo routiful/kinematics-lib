@@ -30,7 +30,7 @@ import controlP5.*;
 import processing.serial.*;
 
 // Shape variables
-PShape link1, link2, link3, link4;
+PShape link1, link2, link3, link4, link5;
 
 // Model pose
 float model_rot_x, model_rot_z, model_trans_x, model_trans_y, model_scale_factor;
@@ -39,7 +39,7 @@ float model_rot_x, model_rot_z, model_trans_x, model_trans_y, model_scale_factor
 Serial opencr_port;
 
 // Angle variable
-float[] joint_angle   = new float[2];
+float[] joint_angle   = new float[3];
 float gripper_angle   = 0.0;
 
 /*******************************************************************************
@@ -154,8 +154,9 @@ void initShape()
   link2       = loadShape("meshes/scara/link2.obj");
   link3       = loadShape("meshes/scara/link3.obj");
   link4       = loadShape("meshes/scara/link4.obj");
+  link5       = loadShape("meshes/scara/link5.obj");
 
-  setJointAngle(0, 0);
+  setJointAngle(0, 0, 0);
   gripperOn();
 }
 
@@ -168,10 +169,10 @@ void setWindow()
   smooth();
   background(30);
 
-  translate(width/2, height/2+180, 0);
+  translate(width/2, height/2+200, 0);
 
   rotateX(radians(0));
-  rotateZ(radians(180));
+  rotateZ(radians(-90));
 }
 
 /*******************************************************************************
@@ -181,14 +182,14 @@ void drawTitle()
 {
   pushMatrix();
   rotateX(radians(0));
-  rotateZ(radians(180));
-  textSize(40);
+  rotateZ(radians(90));
+  textSize(50);
   fill(255,204,102);
-  text("OpenManipulator SCARA", -300,-450,0);
-  textSize(30);
+  text("OpenManipulator SCARA", -300,-460,0);
+  textSize(25);
   fill(102,255,255);
-  text("Press 'A','D','W','S'", -300,-400,0);
-  text("And   'Q','E'",         -300,-360,0);
+  text("Press 'A','D','W','S'", -300,-420,0);
+  text("And   'Q','E'",         -300,-390,0);
   popMatrix();
 }
 
@@ -197,33 +198,38 @@ void drawTitle()
 *******************************************************************************/
 void drawManipulator()
 {
-  scale(1 + model_scale_factor);
+  scale(1.5 + model_scale_factor);
 
   pushMatrix();
   translate(-model_trans_x, -model_trans_y, 0);
-  rotateX(model_rot_x+radians(-20));
+  rotateX(model_rot_x);
+  rotateY(radians(-10));
   rotateZ(model_rot_z);
   shape(link1);
   drawLocalFrame();
 
-  translate(0, 0, 94.5);
+  translate(0, 0, 36);
   rotateZ(-joint_angle[0]);
   shape(link2);
   drawLocalFrame();
 
-  translate(0, 136, 0);
+  translate(30, 0, 24.8);
   rotateZ(-joint_angle[1]);
   shape(link3);
   drawLocalFrame();
 
-  translate(0, 83, 0);
-  rotateY(-gripper_angle);
+  translate(90.25, 0, 0);
+  rotateZ(-joint_angle[2]);
   shape(link4);
   drawLocalFrame();
 
-  translate(0, 22, 0);
+  translate(74, 0, 0);
+  rotateX(-gripper_angle);
+  shape(link5);
   drawLocalFrame();
 
+  translate(30, 0, 0);
+  drawLocalFrame();
   popMatrix();
 }
 
@@ -266,10 +272,11 @@ void drawLocalFrame()
 /*******************************************************************************
 * Set joint angle
 *******************************************************************************/
-void setJointAngle(float angle1, float angle2)
+void setJointAngle(float angle1, float angle2, float angle3)
 {
   joint_angle[0] = angle1;
   joint_angle[1] = angle2;
+  joint_angle[2] = angle3;
 }
 
 /*******************************************************************************
@@ -319,7 +326,7 @@ class ChildApplet extends PApplet
   ControlP5 cp5;
 
   Textlabel headLabel;
-  Knob joint1, joint2, gripper;
+  Knob joint1, joint2, joint3, gripper;
   Slider2D slider2d;
 
   boolean onoff_flag = false;
@@ -377,7 +384,7 @@ class ChildApplet extends PApplet
     joint1 = cp5.addKnob("joint1")
              .setRange(-3.14,3.14)
              .setValue(0)
-             .setPosition(30,160)
+             .setPosition(70,130)
              .setRadius(50)
              .setDragDirection(Knob.HORIZONTAL)
              .setFont(createFont("arial",10))
@@ -389,7 +396,19 @@ class ChildApplet extends PApplet
     joint2 = cp5.addKnob("joint2")
              .setRange(-3.14,3.14)
              .setValue(0)
-             .setPosition(150,160)
+             .setPosition(220,130)
+             .setRadius(50)
+             .setDragDirection(Knob.HORIZONTAL)
+             .setFont(createFont("arial",10))
+             .setColorForeground(color(255))
+             .setColorBackground(color(0, 160, 100))
+             .setColorActive(color(255,255,0))
+             ;
+
+    joint3 = cp5.addKnob("joint3")
+             .setRange(-3.14,3.14)
+             .setValue(0)
+             .setPosition(70,250)
              .setRadius(50)
              .setDragDirection(Knob.HORIZONTAL)
              .setFont(createFont("arial",10))
@@ -401,7 +420,7 @@ class ChildApplet extends PApplet
     gripper = cp5.addKnob("gripper")
              .setRange(-3.14,3.14)
              .setValue(0)
-             .setPosition(270,160)
+             .setPosition(220,250)
              .setRadius(50)
              .setDragDirection(Knob.HORIZONTAL)
              .setFont(createFont("arial",10))
@@ -412,7 +431,7 @@ class ChildApplet extends PApplet
 
     cp5.addButton("Origin")
        .setValue(0)
-       .setPosition(0,330)
+       .setPosition(0,350)
        .setSize(80,40)
        .setFont(createFont("arial",13))
        .setColorForeground(color(150,150,0))
@@ -421,7 +440,7 @@ class ChildApplet extends PApplet
 
     cp5.addButton("Basic")
        .setValue(0)
-       .setPosition(320,330)
+       .setPosition(320,350)
        .setSize(80,40)
        .setFont(createFont("arial",13))
        .setColorForeground(color(150,150,0))
@@ -499,6 +518,11 @@ class ChildApplet extends PApplet
     joint_angle[1] = angle;
   }
 
+  void joint3(float angle)
+  {
+    joint_angle[2] = angle;
+  }
+
   void gripper(float angle)
   {
     gripper_angle = angle;
@@ -510,14 +534,17 @@ class ChildApplet extends PApplet
     {
       joint_angle[0] = 0.0;
       joint_angle[1] = 0.0;
+      joint_angle[2] = 0.0;
 
       joint1.setValue(joint_angle[0]);
       joint2.setValue(joint_angle[1]);
+      joint3.setValue(joint_angle[2]);
       gripper.setValue(gripper_angle);
 
       opencr_port.write("joint"        + ',' +
                         joint_angle[0] + ',' +
-                        joint_angle[1] + '\n');
+                        joint_angle[1] + ',' +
+                        joint_angle[2] + '\n');
     }
     else
     {
@@ -530,14 +557,17 @@ class ChildApplet extends PApplet
     if (onoff_flag)
     {
       joint_angle[0] = -60.0 * PI/180.0;
-      joint_angle[1] = 60.0 * PI/180.0;
+      joint_angle[1] = 20.0 * PI/180.0;
+      joint_angle[2] = 40.0 * PI/180.0;
 
       joint1.setValue(joint_angle[0]);
       joint2.setValue(joint_angle[1]);
+      joint3.setValue(joint_angle[2]);
 
       opencr_port.write("joint"        + ',' +
                         joint_angle[0] + ',' +
-                        joint_angle[1] + '\n');
+                        joint_angle[1] + ',' +
+                        joint_angle[2] + '\n');
     }
     else
     {
@@ -551,7 +581,8 @@ class ChildApplet extends PApplet
     {
       opencr_port.write("joint"        + ',' +
                         joint_angle[0] + ',' +
-                        joint_angle[1] + '\n');
+                        joint_angle[1] + ',' +
+                        joint_angle[2] + '\n');
     }
     else
     {
@@ -578,10 +609,12 @@ class ChildApplet extends PApplet
     {
       if (flag)
       {
+        gripper.setValue(0.0);
         opencr_port.write("on" + '\n');
       }
       else
       {
+        gripper.setValue(-1.0);
         opencr_port.write("off" + '\n');
       }
     }

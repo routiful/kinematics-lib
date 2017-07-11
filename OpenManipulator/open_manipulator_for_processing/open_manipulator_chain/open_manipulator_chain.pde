@@ -701,10 +701,12 @@ class ChildApplet extends PApplet
     {
       if (flag)
       {
+        gripper.setValue(1.3);
         opencr_port.write("on" + '\n');
       }
       else
       {
+        gripper.setValue(0.0);
         opencr_port.write("off" + '\n');
       }
     }

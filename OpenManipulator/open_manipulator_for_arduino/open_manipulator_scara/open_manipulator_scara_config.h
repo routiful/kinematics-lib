@@ -30,19 +30,20 @@
 
 #define PROTOCOL_VERSION    2.0
 
-#define JOINT_NUM           2
+#define JOINT_NUM           3
 #define GRIP_NUM            1
-#define LINK_NUM            4
+#define LINK_NUM            5
 
 #define BASE    0
 #define JOINT1  1
 #define JOINT2  2
-#define END     3
+#define JOINT3  3
+#define END     4
 
 const float grip_on  = 0.0;
 const float grip_off = -1.0;
 
-float mov_time             = 0.2;
+float mov_time             = 0.1;
 const float control_period = 0.008;
 
 bool moving        = false;
